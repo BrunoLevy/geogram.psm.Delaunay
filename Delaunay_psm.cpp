@@ -1,7 +1,7 @@
 #include "Delaunay_psm.h"
 
 /*
- *  Copyright (c) 2012-2014, Bruno Levy
+ *  Copyright (c) 2000-2022 Inria
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,19 +28,13 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *  If you modify this software, you should include a notice giving the
- *  name of the person performing the modification, the date of modification,
- *  and the reason for such modification.
- *
  *  Contact: Bruno Levy
  *
- *     Bruno.Levy@inria.fr
- *     http://www.loria.fr/~levy
+ *     https://www.inria.fr/fr/bruno-levy
  *
- *     ALICE Project
- *     LORIA, INRIA Lorraine, 
- *     Campus Scientifique, BP 239
- *     54506 VANDOEUVRE LES NANCY CEDEX 
+ *     Inria,
+ *     Domaine de Voluceau,
+ *     78150 Le Chesnay - Rocquencourt
  *     FRANCE
  *
  */
@@ -2677,7 +2671,8 @@ namespace GEO {
                     exit(0);
                 }
                 if(arg == "--version" || arg == "--v") {
-                    std::cout << FileSystem::base_name(argv[0])
+   		    std::cout << std::endl;
+                    std::cout << "      " << FileSystem::base_name(argv[0])
                      << " "
                      << Environment::instance()->get_value("version")
                      << " (built "
@@ -2685,20 +2680,13 @@ namespace GEO {
                          "release_date")
                      << ")"
                      << std::endl
-                     << "Copyright (C) 2006-2017"
+                     << "      Copyright (C) Inria 2000-2022"
                      << std::endl
-                     << "The Geogram library used by this program is licensed"
-                     << std::endl
-                     << "under the 3-clauses BSD license."
-                     << std::endl
-                     << "Inria, the ALICE project"
-                     << std::endl
-                     << "   <http://alice.loria.fr/software/geogram>"
-                     << std::endl
-                     << "Report Geogram bugs to the geogram mailing list, see: "
-                     << std::endl
-                     << "   <https://gforge.inria.fr/mail/?group_id=5833>"
+		     << "      License: <https://github.com/BrunoLevy/geogram/blob/main/LICENSE>"
+		     << std::endl
+                     << "      Website: <https://github.com/BrunoLevy/geogram>"
                      << std::endl;
+   		    std::cout << std::endl;		   
                     exit(0);
                 }
             }
@@ -28672,7 +28660,11 @@ namespace {
 #if defined(GEO_COMPILER_GCC_FAMILY)
 	return GEO::index_t(Numeric::uint32(__builtin_popcount(x)));
 #elif defined(GEO_COMPILER_MSVC)
-	return GEO::index_t(__popcnt(x));
+    #if defined(_M_ARM64)
+	return GEO::index_t(_CountOneBits(x));
+    #else
+ 	return GEO::index_t(__popcnt(x));
+    #endif
 #else
 	int result = 0;
 	for(int b=0; b<32; ++b) {

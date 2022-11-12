@@ -3,7 +3,7 @@
 #define GEO_DYNAMIC_LIBS
 #endif
 /*
- *  Copyright (c) 2012-2014, Bruno Levy
+ *  Copyright (c) 2000-2022 Inria
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,19 +30,13 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  *
- *  If you modify this software, you should include a notice giving the
- *  name of the person performing the modification, the date of modification,
- *  and the reason for such modification.
- *
  *  Contact: Bruno Levy
  *
- *     Bruno.Levy@inria.fr
- *     http://www.loria.fr/~levy
+ *     https://www.inria.fr/fr/bruno-levy
  *
- *     ALICE Project
- *     LORIA, INRIA Lorraine, 
- *     Campus Scientifique, BP 239
- *     54506 VANDOEUVRE LES NANCY CEDEX 
+ *     Inria,
+ *     Domaine de Voluceau,
+ *     78150 Le Chesnay - Rocquencourt
  *     FRANCE
  *
  */
@@ -1883,6 +1877,11 @@ inline void geo_pause() {
 # define GEO_USE_DEFAULT_SPINLOCK_ARRAY
 # include <AvailabilityMacros.h>
 # if defined(MAC_OS_X_VERSION_10_12) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12
+#   define GEO_APPLE_HAS_UNFAIR_LOCK 1
+#   include <os/lock.h>
+# endif
+# if defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_10_0
+#   define GEO_APPLE_HAS_UNFAIR_LOCK 1
 #   include <os/lock.h>
 # endif
 #endif
@@ -1956,7 +1955,7 @@ namespace GEO {
 
 #elif defined(GEO_OS_APPLE)
 
-#if defined(MAC_OS_X_VERSION_10_12) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12
+#if defined(GEO_APPLE_HAS_UNFAIR_LOCK)
         
         typedef os_unfair_lock spinlock;
         
@@ -2620,12 +2619,12 @@ namespace GEO {
 
 // Older MAC OS X do not have thread_local
 #ifdef GEO_OS_APPLE
-# if MAC_OS_X_VERSION_MIN_REQUIRED <= MAC_OS_X_VERSION_10_9
+# if defined(TARGET_OS_OSX) && MAC_OS_X_VERSION_MIN_REQUIRED <= MAC_OS_X_VERSION_10_9
 #  define thread_local
 #  define GEO_NO_THREAD_LOCAL    
 # endif
 #endif
-   
+
     class GEOGRAM_API Thread : public Counted {
     public:
 
@@ -4546,6 +4545,7 @@ namespace GEO {
         double a, b, c, d;
     };
 
+   
 
     class Box {
     public:
@@ -4565,6 +4565,8 @@ namespace GEO {
         }
     };
 
+    typedef Box Box3d;
+    
     inline bool bboxes_overlap(const Box& B1, const Box& B2) {
         for(coord_index_t c = 0; c < 3; ++c) {
             if(B1.xyz_max[c] < B2.xyz_min[c]) {
@@ -4586,6 +4588,46 @@ namespace GEO {
 
    
 
+    class Box2d {
+    public:
+        double xy_min[3];
+        double xy_max[3];
+
+        bool contains(const vec2& b) const {
+            for(coord_index_t c = 0; c < 2; ++c) {
+                if(b[c] < xy_min[c]) {
+                    return false;
+                }
+                if(b[c] > xy_max[c]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    };
+
+
+    inline bool bboxes_overlap(const Box2d& B1, const Box2d& B2) {
+        for(coord_index_t c = 0; c < 2; ++c) {
+            if(B1.xy_max[c] < B2.xy_min[c]) {
+                return false;
+            }
+            if(B1.xy_min[c] > B2.xy_max[c]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    inline void bbox_union(Box2d& target, const Box2d& B1, const Box2d& B2) {
+        for(coord_index_t c = 0; c < 2; ++c) {
+            target.xy_min[c] = std::min(B1.xy_min[c], B2.xy_min[c]);
+            target.xy_max[c] = std::max(B1.xy_max[c], B2.xy_max[c]);
+        }
+    }
+    
+   
+    
     template <class FT> vecng<3,FT> transform_vector(
         const vecng<3,FT>& v,
         const Matrix<4,FT>& m
@@ -4807,7 +4849,7 @@ namespace GEO {
         );
 
 
-#ifndef GEOGRAM_PSM        
+#ifndef GEOGRAM_PSM
         inline Sign orient_3d(
             const vec3& p0, const vec3& p1,
             const vec3& p2, const vec3& p3
