@@ -108,7 +108,9 @@ namespace GEO {
             ::memcpy(to, from, size);
         }
 
-	inline pointer function_pointer_to_generic_pointer(function_pointer fptr) {
+	inline pointer function_pointer_to_generic_pointer(
+            function_pointer fptr
+        ) {
 	    // I know this is ugly, but I did not find a simpler warning-free
 	    // way that is portable between all compilers.
 	    pointer result = nullptr;
@@ -116,7 +118,9 @@ namespace GEO {
 	    return result;
 	}
 
-	inline function_pointer generic_pointer_to_function_pointer(pointer ptr) {
+	inline function_pointer generic_pointer_to_function_pointer(
+            pointer ptr
+        ) {
 	    // I know this is ugly, but I did not find a simpler warning-free
 	    // way that is portable between all compilers.
 	    function_pointer result = nullptr;
@@ -487,17 +491,19 @@ namespace GEO {
 
     
 
-    inline double det2x2(
-        double a11, double a12,                    
-        double a21, double a22
+    template <class T>
+    inline T det2x2(
+        const T& a11, const T& a12,                    
+        const T& a21, const T& a22
     ) {                                 
         return a11*a22-a12*a21 ;
     }
 
-    inline double det3x3(
-        double a11, double a12, double a13,                
-        double a21, double a22, double a23,                
-        double a31, double a32, double a33
+    template <class T>    
+    inline T det3x3(
+        const T& a11, const T& a12, const T& a13,                
+        const T& a21, const T& a22, const T& a23,                
+        const T& a31, const T& a32, const T& a33
     ) {
     return
          a11*det2x2(a22,a23,a32,a33)   
@@ -506,23 +512,24 @@ namespace GEO {
     }   
 
 
-    inline double det4x4(
-        double a11, double a12, double a13, double a14,
-        double a21, double a22, double a23, double a24,               
-        double a31, double a32, double a33, double a34,  
-        double a41, double a42, double a43, double a44  
+    template <class T>    
+    inline T det4x4(
+        const T& a11, const T& a12, const T& a13, const T& a14,
+        const T& a21, const T& a22, const T& a23, const T& a24,               
+        const T& a31, const T& a32, const T& a33, const T& a34,  
+        const T& a41, const T& a42, const T& a43, const T& a44  
     ) {
-        double m12 = a21*a12 - a11*a22;
-        double m13 = a31*a12 - a11*a32;
-        double m14 = a41*a12 - a11*a42;
-        double m23 = a31*a22 - a21*a32;
-        double m24 = a41*a22 - a21*a42;
-        double m34 = a41*a32 - a31*a42;
+        T m12 = a21*a12 - a11*a22;
+        T m13 = a31*a12 - a11*a32;
+        T m14 = a41*a12 - a11*a42;
+        T m23 = a31*a22 - a21*a32;
+        T m24 = a41*a22 - a21*a42;
+        T m34 = a41*a32 - a31*a42;
 
-        double m123 = m23*a13 - m13*a23 + m12*a33;
-        double m124 = m24*a13 - m14*a23 + m12*a43;
-        double m134 = m34*a13 - m14*a33 + m13*a43;
-        double m234 = m34*a23 - m24*a33 + m23*a43;
+        T m123 = m23*a13 - m13*a23 + m12*a33;
+        T m124 = m24*a13 - m14*a23 + m12*a43;
+        T m134 = m34*a13 - m14*a33 + m13*a43;
+        T m234 = m34*a23 - m24*a33 + m23*a43;
         
         return (m234*a14 - m134*a24 + m124*a34 - m123*a44);
     }   
@@ -884,7 +891,7 @@ namespace GEO {
             const VEC& p1, const VEC& p2
         ) {
             geo_debug_assert(p1.dimension() == p2.dimension());
-            return distance(p1.data(), p2.data(), p1.dimension());
+            return distance(p1.data(), p2.data(), coord_index_t(p1.dimension()));
         }
 
         template <class COORD_T>
@@ -1422,6 +1429,26 @@ namespace GEO {
             }
         }
 
+        void split_string(
+            const std::string& in,
+            const std::string& separator,
+            std::vector<std::string>& out,
+            bool skip_empty_fields
+        ) {
+            size_t length = in.length();
+            size_t start = 0;
+            while(start < length) {
+                size_t end = in.find(separator, start);
+                if(end == std::string::npos) {
+                    end = length;
+                } 
+                if(!skip_empty_fields || (end - start > 0)) {
+                    out.push_back(in.substr(start, end - start));
+                }
+                start = end + separator.length();
+            }
+        }
+        
         bool GEOGRAM_API split_string(
             const std::string& in,
             char separator,
@@ -1846,6 +1873,12 @@ namespace GEO {
         
         bool GEOGRAM_API is_directory(const std::string& path);
 
+        bool GEOGRAM_API can_read_directory(const std::string& path);
+
+        bool GEOGRAM_API can_write_directory(
+            const std::string& path, bool create_missing_directories = false
+        );
+
 	
         bool GEOGRAM_API create_directory(const std::string& path);
 
@@ -1921,6 +1954,9 @@ namespace GEO {
 
 		
         std::string GEOGRAM_API normalized_path(const std::string& path);
+
+	
+        std::string GEOGRAM_API absolute_path(const std::string& path);
 
 		
         std::string GEOGRAM_API home_directory();
@@ -2867,7 +2903,7 @@ namespace GEO {
             return true;
         }
 
-        void set_arg(const std::string& name, int value) {
+        void set_arg(const std::string& name, Numeric::int32 value) {
             ArgType type = get_arg_type(name);
             geo_assert_arg_type(
                 type, ARG_INT | ARG_DOUBLE | ARG_PERCENT | ARG_STRING
@@ -2875,7 +2911,7 @@ namespace GEO {
             Environment::instance()->set_value(name, String::to_string(value));
         }
 
-        void set_arg(const std::string& name, unsigned int value) {
+        void set_arg(const std::string& name, Numeric::uint32 value) {
             ArgType type = get_arg_type(name);
             geo_assert_arg_type(
                 type, ARG_INT | ARG_DOUBLE | ARG_PERCENT | ARG_STRING
@@ -2883,6 +2919,22 @@ namespace GEO {
             Environment::instance()->set_value(name, String::to_string(value));
         }
 
+        void set_arg(const std::string& name, Numeric::int64 value) {
+            ArgType type = get_arg_type(name);
+            geo_assert_arg_type(
+                type, ARG_INT | ARG_DOUBLE | ARG_PERCENT | ARG_STRING
+            );
+            Environment::instance()->set_value(name, String::to_string(value));
+        }
+
+        void set_arg(const std::string& name, Numeric::uint64 value) {
+            ArgType type = get_arg_type(name);
+            geo_assert_arg_type(
+                type, ARG_INT | ARG_DOUBLE | ARG_PERCENT | ARG_STRING
+            );
+            Environment::instance()->set_value(name, String::to_string(value));
+        }
+        
         void set_arg(const std::string& name, double value) {
             ArgType type = get_arg_type(name);
             geo_assert_arg_type(type, ARG_DOUBLE | ARG_PERCENT | ARG_STRING);
@@ -3943,7 +3995,7 @@ namespace {
         );
         declare_arg(
             "gfx:GLUP_profile", "auto",
-            "one of auto, GLUP150, GLUP440, GLUPES"
+            "one of auto, GLUP150, GLUP440, GLUPES2"
         );
         declare_arg("gfx:full_screen", false, "full screen mode");
         declare_arg(
@@ -4874,10 +4926,13 @@ extern "C" {
 #include <fstream>
 #include <assert.h>
 
+#include <sys/stat.h>
+
 #ifdef GEO_OS_WINDOWS
 #include <windows.h>
 #include <io.h>
 #include <shlobj.h>
+constexpr char SEPARATOR = '\\';
 #else
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -4885,6 +4940,7 @@ extern "C" {
 #include <dirent.h>
 #include <unistd.h>
 #include <stdio.h>
+constexpr char SEPARATOR = '/';
 #endif
 
 #ifdef GEO_OS_EMSCRIPTEN
@@ -5879,6 +5935,40 @@ namespace GEO {
 	    return root_->is_directory(path);
 	}
 
+
+    bool can_read_directory(const std::string& path) {
+        const std::string abs_path = absolute_path(path);
+#ifdef GEO_OS_WINDOWS
+        return is_directory(abs_path); // TODO: check permissions
+#else
+        struct stat stats;
+        if( ::stat(abs_path.c_str(), &stats) == 0 ) {
+            return (stats.st_mode & S_IRUSR) != 0;
+        }
+        return false;
+#endif
+    }
+
+    bool can_write_directory(
+        const std::string& path, bool create_missing_directories
+    ) {
+        std::string abs_path = absolute_path(path);
+        if( create_missing_directories ) {
+            if( !FileSystem::create_directory(abs_path) ) {
+                return false;
+            }
+        }
+#ifdef GEO_OS_WINDOWS
+        return is_directory(abs_path); // TODO: check permissions
+#else
+        struct stat stats;
+        if( ::stat(abs_path.c_str(), &stats) == 0 ) {
+            return (stats.st_mode & S_IWUSR) != 0;
+        }
+        return false;
+#endif
+    }
+
 	bool create_directory(const std::string& path) {
 	    return root_->create_directory(path);
 	}
@@ -5973,6 +6063,32 @@ namespace GEO {
 	std::string normalized_path(const std::string& path) {
 	    return root_->normalized_path(path);
 	}
+
+        std::string absolute_path(const std::string& path) {
+            if( path.empty() ) {
+                return path;
+            }
+            if( path[0] == '.' ) {
+                return FileSystem::normalized_path(
+                    FileSystem::get_current_working_directory() + '/' + path
+                );
+            }
+            if( path[0] == '/' ) {
+                return FileSystem::normalized_path(path);
+            }
+#ifdef GEO_OS_WINDOWS
+            if(
+                path.size() > 2 && path[1] == ':' &&
+                (path[2] == '\\' || path[2] == '/')
+            ) {
+                return FileSystem::normalized_path(path);
+            }
+#endif
+            // relative path
+            return FileSystem::normalized_path(
+                FileSystem::get_current_working_directory() + SEPARATOR + path
+            );
+        }
 
 	std::string home_directory() {
 	    return root_->home_directory();
@@ -6266,19 +6382,19 @@ namespace {
     public:
         
 	void begin() override {
-            const ProgressTask* task = Progress::current_task();
+            const ProgressTask* task = Progress::current_progress_task();
             CmdLine::ui_progress(task->task_name(), 0, 0);
         }
 
         
 	void progress(index_t step, index_t percent) override {
-            const ProgressTask* task = Progress::current_task();
+            const ProgressTask* task = Progress::current_progress_task();
             CmdLine::ui_progress(task->task_name(), step, percent);
         }
 
         
 	void end(bool canceled) override {
-            const ProgressTask* task = Progress::current_task();
+            const ProgressTask* task = Progress::current_progress_task();
             double elapsed = SystemStopwatch::now() - task->start_time();
             if(canceled) {
                 CmdLine::ui_progress_canceled(
@@ -6320,7 +6436,7 @@ namespace GEO {
             progress_client_ = client;
         }
 
-        const ProgressTask* current_task() {
+        const ProgressTask* current_progress_task() {
             return progress_tasks_.empty() ? nullptr : progress_tasks_.top();
         }
 
@@ -7153,7 +7269,9 @@ namespace GEO {
 
     namespace Process {
 	void sleep(index_t microseconds) {
-	    std::this_thread::sleep_for(std::chrono::microseconds(microseconds));	    
+	    std::this_thread::sleep_for(
+                std::chrono::microseconds(microseconds)
+            );	    
 	}
     }
 }
@@ -7403,7 +7521,7 @@ namespace {
     }
 
     void sigint_handler(int) {
-        if(Progress::current_task() != nullptr) {
+        if(Progress::current_progress_task() != nullptr) {
             Progress::cancel();
         } else {
             exit(1);
@@ -7510,20 +7628,8 @@ namespace GEO {
         }
 
         bool os_enable_FPE(bool flag) {
-#ifdef GEO_OS_APPLE
-/*	    
-           unsigned int excepts = 0
-                // | _MM_MASK_INEXACT   // inexact result
-                   | _MM_MASK_DIV_ZERO  // division by zero
-                   | _MM_MASK_UNDERFLOW // result not representable due to underflow
-                   | _MM_MASK_OVERFLOW  // result not representable due to overflow
-                   | _MM_MASK_INVALID   // invalid operation
-                   ;
-*/
-            // _MM_SET_EXCEPTION_MASK(_MM_GET_EXCEPTION_MASK() & ~excepts);
+#if defined(GEO_OS_APPLE) || defined(GEO_OS_EMSCRIPTEN)
             geo_argused(flag);
-//          geo_argused(excepts);
-            return true;
 #else
             int excepts = 0
                 // | FE_INEXACT     // inexact result
@@ -7532,10 +7638,6 @@ namespace GEO {
                    | FE_OVERFLOW    // result not representable due to overflow
                    | FE_INVALID     // invalid operation
                    ;
-#ifdef GEO_OS_EMSCRIPTEN
-            geo_argused(flag);
-            geo_argused(excepts);
-#else            
             if(flag) {
                 feenableexcept(excepts);
             } else {
@@ -7543,7 +7645,6 @@ namespace GEO {
             }
 #endif            
             return true;
-#endif
         }
 
         bool os_enable_cancel(bool flag) {
@@ -7870,7 +7971,7 @@ namespace {
     }
 
     void sigint_handler(int) {
-        if(Progress::current_task() != nullptr) {
+        if(Progress::current_progress_task() != nullptr) {
             Progress::cancel();
         } else {
             exit(1);
@@ -8583,9 +8684,29 @@ namespace GEO {
         index_t stride,
 	vector<index_t>::iterator first,
 	vector<index_t>::iterator last,
-	double period = 1.0
+	const vec3& period
     );
 
+    inline void Hilbert_sort_periodic(
+	index_t nb_vertices, const double* vertices,
+	vector<index_t>& sorted_indices,
+	index_t dimension,
+        index_t stride,
+	vector<index_t>::iterator first,
+	vector<index_t>::iterator last,
+	double period = 1.0
+    ) {
+        Hilbert_sort_periodic(
+            nb_vertices, vertices,
+            sorted_indices,
+            dimension,
+            stride,
+            first,
+            last,
+            vec3(period, period, period)
+        );        
+    }
+    
     
     
 }
@@ -9363,7 +9484,7 @@ namespace {
         PeriodicVertexArray3d(
             index_t nb_vertices,
             const double* base, index_t stride,
-	    double period = 1.0
+            const vec3& period
         ) :
             base_(base),
             stride_(stride) {
@@ -9374,7 +9495,7 @@ namespace {
 	    
 	    for(index_t i=0; i<27; ++i) {
 		for(index_t j=0; j<3; ++j) {
-		    xlat_[i][j] = period * double(Periodic_translation[i][j]);
+		    xlat_[i][j] = period[j] * double(Periodic_translation[i][j]);
 		}
 	    }
         }
@@ -9397,7 +9518,7 @@ namespace {
     public:
         PeriodicVertexMesh3d(
             index_t nb_vertices,
-            const double* base, index_t stride, double period
+            const double* base, index_t stride, const vec3& period
 	) : vertices(nb_vertices, base, stride, period) {
         }
 	
@@ -9445,7 +9566,7 @@ namespace GEO {
         index_t stride,
 	vector<index_t>::iterator b,
 	vector<index_t>::iterator e,
-	double period
+	const vec3& period
     ) {
 	geo_assert(dimension == 3); // Only implemented for 3D.	
 	geo_argused(sorted_indices); // Accessed through b and e.
@@ -9474,7 +9595,9 @@ namespace GEO {
 #define GEOGRAM_NUMERICS_MULTI_PRECISION
 
 #include <iostream>
+#include <sstream>
 #include <new>
+#include <math.h>
 
 
 namespace GEO {
@@ -9885,13 +10008,40 @@ namespace GEO {
             return geo_sgn(x_[length() - 1]);
         }
 
-        std::ostream& show(std::ostream& os) const {
-            for(index_t i = 0; i < length(); ++i) {
-                os << i << ':' << x_[i] << ' ';
-            }
-            return os << std::endl;
+        bool is_same_as(const expansion& rhs) const;
+
+        bool is_same_as(double rhs) const;
+
+
+        Sign compare(const expansion& rhs) const;
+
+        Sign compare(double rhs) const;
+
+        bool equals(const expansion& rhs) const {
+            return (compare(rhs) == ZERO);
         }
 
+        bool equals(double rhs) const {
+            return (compare(rhs) == ZERO);            
+        }
+        
+        std::ostream& show(std::ostream& out) const {
+            out << "expansion[" << length() << "] = [";
+            for(index_t i=0; i<length(); ++i) {
+                out << (*this)[i] << " ";
+            }
+            out << "]";
+            return out;
+        }
+
+        std::string to_string() const {
+            std::ostringstream out;
+            show(out);
+            return out.str();
+        }
+
+        void optimize();
+        
     protected:
         static index_t sub_product_capacity(
             index_t a_length, index_t b_length
@@ -10023,6 +10173,25 @@ namespace GEO {
     );
     
     
+
+    void GEOGRAM_API grow_expansion_zeroelim(
+        const expansion& e, double b, expansion& h
+    );
+
+    void GEOGRAM_API scale_expansion_zeroelim(
+        const expansion& e, double b, expansion& h
+    );    
+
+    void GEOGRAM_API fast_expansion_sum_zeroelim(
+        const expansion& e, const expansion& f, expansion& h
+    );
+
+
+    void GEOGRAM_API fast_expansion_diff_zeroelim(
+        const expansion& e, const expansion& f, expansion& h
+    );
+    
+    
 }
 
 #endif
@@ -10063,8 +10232,9 @@ namespace {
     
 
     class Pools {
-    public:
 
+    public:
+        
         Pools() : pools_(1024,nullptr) {
             chunks_.reserve(1024);
         }
@@ -10078,12 +10248,12 @@ namespace {
         void* malloc(size_t size) {
             if(size >= pools_.size()) {
                 return ::malloc(size);
-            }
+            } 
             if(pools_[size] == nullptr) {
                 new_chunk(size);
             }
-            void* result = pools_[size];
-            pools_[size] = *static_cast<void**>(pools_[size]);
+            Memory::pointer result = pools_[size];
+            pools_[size] = next(pools_[size]);
             return result;
         }
 
@@ -10092,31 +10262,54 @@ namespace {
                 ::free(ptr);
                 return;
             }
-            *static_cast<void**>(ptr) = pools_[size];
-            pools_[size] = ptr;
+            set_next(Memory::pointer(ptr), pools_[size]);
+            pools_[size] = Memory::pointer(ptr);
         }
 
         
     protected:
-        static const index_t POOL_CHUNK_SIZE = 512;
+        static const index_t NB_ITEMS_PER_CHUNK = 512;
         
-        void new_chunk(size_t size_in) {
-            size_t size = (size_in / 8 + 1)*8; // Align memory.
-            Memory::pointer chunk = new Memory::byte[size * POOL_CHUNK_SIZE];
-            for(index_t i=0; i<POOL_CHUNK_SIZE-1; ++i) {
-                Memory::pointer cur = chunk + size * i;
-                Memory::pointer next = cur + size;
-                *reinterpret_cast<void**>(cur) = next;
+        void new_chunk(size_t item_size) {
+            // Allocate chunk
+            Memory::pointer chunk =
+                new Memory::byte[item_size * NB_ITEMS_PER_CHUNK];
+            // Chain items in chunk
+            for(index_t i=0; i<NB_ITEMS_PER_CHUNK-1; ++i) {
+                Memory::pointer cur_item  = item(chunk, item_size, i);
+                Memory::pointer next_item = item(chunk, item_size, i+1);
+                set_next(cur_item, next_item);
             }
-            *reinterpret_cast<void**>(chunk + (size-1)*POOL_CHUNK_SIZE) =
-		pools_[size_in];
-            pools_[size_in] = chunk;
+            // Last item's next is pool's first
+            set_next(
+                item(chunk, item_size,NB_ITEMS_PER_CHUNK-1),
+                pools_[item_size]
+            );
+            // Set pool's first to first in chunk
+            pools_[item_size] = chunk;
             chunks_.push_back(chunk);
         }
 
-        
     private:
-        std::vector<void*> pools_;
+
+        Memory::pointer next(Memory::pointer item) const {
+            return *reinterpret_cast<Memory::pointer*>(item);
+        }
+
+        void set_next(
+            Memory::pointer item, Memory::pointer next
+        ) const {
+            *reinterpret_cast<Memory::pointer*>(item) = next;
+        }
+
+        Memory::pointer item(
+            Memory::pointer chunk, size_t item_size, index_t index
+        ) const {
+            geo_debug_assert(index < NB_ITEMS_PER_CHUNK);
+            return chunk + (item_size * size_t(index));
+        }
+        
+        std::vector<Memory::pointer> pools_;
         
         std::vector<Memory::pointer> chunks_;
 
@@ -10270,6 +10463,9 @@ namespace {
         two_sum(_m, _k, x[7], x[6]);
 #endif
     }
+}
+
+namespace GEO {
 
     void grow_expansion_zeroelim(
         const expansion& e, double b, expansion& h
@@ -10807,6 +11003,46 @@ namespace GEO {
     
     
 
+    bool expansion::is_same_as(const expansion& rhs) const {
+        if(length() != rhs.length()) {
+            return false;
+        }
+        for(index_t i=0; i<length(); ++i) {
+            if(x_[i] != rhs.x_[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool expansion::is_same_as(double rhs) const {
+        if(length() != 1) {
+            return false;
+        }
+        return (x_[0] == rhs);
+    }
+
+    Sign expansion::compare(const expansion& rhs) const {
+        if(is_same_as(rhs)) {
+            return ZERO;
+        }
+        const expansion& d = expansion_diff(*this, rhs);
+        return d.sign();
+    }
+    
+    Sign expansion::compare(double rhs) const {
+        if(rhs == 0.0) {
+            return sign();
+        }
+        if(is_same_as(rhs)) {
+            return ZERO;
+        }
+        const expansion& d = expansion_diff(*this, rhs);
+        return d.sign();
+    }
+    
+    
+    
     Sign sign_of_expansion_determinant(
         const expansion& a00,const expansion& a01,  
         const expansion& a10,const expansion& a11
@@ -10897,6 +11133,12 @@ namespace GEO {
         return result.sign();
     }
     
+    
+
+    void expansion::optimize() {
+        grow_expansion_zeroelim(*this, 0.0, *this);
+    }
+
     
     
 }
@@ -21225,8 +21467,8 @@ namespace GEO {
 	) {
 	    Sign result = Sign(det_3d_filter(p0, p1, p2));
 	    if(result == 0) {
-		result = dot_3d_exact(p0, p1, p2);
-	    }
+                result = dot_3d_exact(p0, p1, p2);
+            }
 	    return result;
 	}
 
@@ -22386,12 +22628,6 @@ namespace GEO {
     ) {
         nb_vertices_ = nb_vertices;
         vertices_ = vertices;
-        if(nb_vertices_ < index_t(dimension()) + 1) {
-            Logger::warn("Delaunay") << "Only "
-                << nb_vertices
-                << " vertices, may be not enough !"
-                << std::endl;
-        }
     }
 
     void Delaunay::set_BRIO_levels(const vector<index_t>& levels) {
@@ -22780,7 +23016,7 @@ namespace GEO {
                                        << std::endl;
         } 
 
-        // The indices of the vertices of the first tetrahedron.
+        // The indices of the vertices of the first triangle.
         index_t v0, v1, v2;
         if(!create_first_triangle(v0, v1, v2)) {
             Logger::warn("Delaunay2d") << "All the points are colinear"
@@ -22822,8 +23058,8 @@ namespace GEO {
         // (remove free and virtual tetrahedra).
         //   Since cell_next_ is not used at this point,
         // we reuse it for storing the conversion array that
-        // maps old tet indices to new tet indices
-        // Note: tet_is_real() uses the previous value of 
+        // maps old trgl indices to new trgl indices
+        // Note: trgl_is_real() uses the previous value of 
         // cell_next(), but we are processing indices
         // in increasing order and since old2new[t] is always
         // smaller or equal to t, we never overwrite a value
@@ -22864,9 +23100,9 @@ namespace GEO {
                 signed_index_t t = cell_to_cell_store_[i];
                 geo_debug_assert(t >= 0);
                 t = signed_index_t(old2new[t]);
-                // Note: t can be equal to -1 when a real tet is
+                // Note: t can be equal to -1 when a real trgl is
                 // adjacent to a virtual one (and this is how the
-                // rest of Vorpaline expects to see tets on the
+                // rest of Vorpaline expects to see trgls on the
                 // border).
                 cell_to_cell_store_[i] = t;
             }
@@ -22969,7 +23205,7 @@ namespace GEO {
         // Find the nearest vertex among t's vertices
         for(index_t lv = 0; lv < 3; ++lv) {
             signed_index_t v = triangle_vertex(t, lv);
-            // If the tetrahedron is virtual, then the first vertex
+            // If the triangle is virtual, then the first vertex
             // is the vertex at infinity and is skipped.
             if(v < 0) {
                 continue;
@@ -22989,7 +23225,7 @@ namespace GEO {
         const double* p, index_t hint, index_t max_iter
     ) const {
 
-        // If no hint specified, find a tetrahedron randomly
+        // If no hint specified, find a triangle randomly
         while(hint == NO_TRIANGLE) {
             hint = index_t(Numeric::random_int32()) % max_t();
             if(triangle_is_free(hint)) {
@@ -23000,7 +23236,7 @@ namespace GEO {
 	geo_debug_assert(!triangle_is_free(hint));
 	geo_debug_assert(!triangle_is_in_list(hint));
 	
-        //  Always start from a real tet. If the tet is virtual,
+        //  Always start from a real trgl. If the trgl is virtual,
         // find its real neighbor (always opposite to the
         // infinite vertex)
         if(triangle_is_virtual(hint)) {
@@ -23027,17 +23263,17 @@ namespace GEO {
                 
                 signed_index_t s_t_next = triangle_adjacent(t,le);
 
-                //  If the opposite tet is -1, then it means that
+                //  If the opposite trgl is -1, then it means that
                 // we are trying to locate() (e.g. called from
-                // nearest_vertex) within a tetrahedralization 
-                // from which the infinite tets were removed.
+                // nearest_vertex) within a triangulation 
+                // from which the infinite trgls were removed.
                 if(s_t_next == -1) {
                     return NO_TRIANGLE;
                 }
 
                 index_t t_next = index_t(s_t_next);
 
-                //   If the candidate next tetrahedron is the
+                //   If the candidate next triangle is the
                 // one we came from, then we know already that
                 // the orientation is positive, thus we examine
                 // the next candidate (or exit the loop if they
@@ -23061,10 +23297,10 @@ namespace GEO {
                     continue;
                 }
 
-                //  If the opposite tet is a virtual tet, then
+                //  If the opposite trgl is a virtual trgl, then
                 // the point has a positive orientation relative
                 // to the facet on the border of the convex hull,
-                // thus t_next is a tet in conflict and we are
+                // thus t_next is a trgl in conflict and we are
                 // done.
                 if(triangle_is_virtual(t_next)) {
                     return t_next;
@@ -23082,8 +23318,8 @@ namespace GEO {
 
         //   If we reach this point, we did not find a valid successor
         // for walking (a face for which p has negative orientation), 
-        // thus we reached the tet for which p has all positive 
-        // face orientations (i.e. the tet that contains p).
+        // thus we reached the trgl for which p has all positive 
+        // face orientations (i.e. the trgl that contains p).
 
         return t;
     }
@@ -23099,7 +23335,7 @@ namespace GEO {
         // (a little bit) performance (a few 
         // percent in total Delaunay computation
         // time), but it is better than nothing...
-        //   Note: there is a maximum number of tets 
+        //   Note: there is a maximum number of trgls 
         // traversed by locate_inexact()  (2500)
         // since there exists configurations in which
         // locate_inexact() loops forever !
@@ -23116,7 +23352,7 @@ namespace GEO {
             Process::acquire_spinlock(lock);
         }
 
-        // If no hint specified, find a tetrahedron randomly
+        // If no hint specified, find a triangle randomly
         while(hint == NO_TRIANGLE) {
             hint = index_t(Numeric::random_int32()) % max_t();
             if(triangle_is_free(hint)) {
@@ -23127,7 +23363,7 @@ namespace GEO {
 	geo_debug_assert(!triangle_is_free(hint));
 	geo_debug_assert(!triangle_is_in_list(hint));
 	
-        //  Always start from a real tet. If the tet is virtual,
+        //  Always start from a real trgl. If the trgl is virtual,
         // find its real neighbor (always opposite to the
         // infinite vertex)
         if(triangle_is_virtual(hint)) {
@@ -23168,8 +23404,8 @@ namespace GEO {
 
                 //  If the opposite triangle is -1, then it means that
                 // we are trying to locate() (e.g. called from
-                // nearest_vertex) within a tetrahedralization 
-                // from which the infinite tets were removed.
+                // nearest_vertex) within a triangulation 
+                // from which the infinite trgls were removed.
                 if(s_t_next == -1) {
                     if(thread_safe) {
                         Process::release_spinlock(lock);
@@ -23183,7 +23419,7 @@ namespace GEO {
 		geo_debug_assert(!triangle_is_in_list(t_next));
 
 		
-                //   If the candidate next tetrahedron is the
+                //   If the candidate next triangle is the
                 // one we came from, then we know already that
                 // the orientation is positive, thus we examine
                 // the next candidate (or exit the loop if they
@@ -23196,7 +23432,7 @@ namespace GEO {
                 //   To test the orientation of p w.r.t. the facet f of
                 // t, we replace vertex number f with p in t (same
                 // convention as in CGAL).
-                // This is equivalent to tet_facet_point_orient3d(t,f,p)
+                // This is equivalent to trgl_facet_point_orient3d(t,f,p)
                 // (but less costly, saves a couple of lookups)
                 const double* pv_bkp = pv[le];
                 pv[le] = p;
@@ -23210,10 +23446,10 @@ namespace GEO {
                     continue;
                 }
 
-                //  If the opposite tet is a virtual tet, then
+                //  If the opposite trgl is a virtual trgl, then
                 // the point has a positive orientation relative
                 // to the facet on the border of the convex hull,
-                // thus t_next is a tet in conflict and we are
+                // thus t_next is a trgl in conflict and we are
                 // done.
                 if(triangle_is_virtual(t_next)) {
                     if(thread_safe) {
@@ -23235,8 +23471,8 @@ namespace GEO {
 
         //   If we reach this point, we did not find a valid successor
         // for walking (a face for which p has negative orientation), 
-        // thus we reached the tet for which p has all positive 
-        // face orientations (i.e. the tet that contains p).
+        // thus we reached the trgl for which p has all positive 
+        // face orientations (i.e. the trgl that contains p).
 
         if(thread_safe) {
             Process::release_spinlock(lock);
@@ -23253,7 +23489,7 @@ namespace GEO {
         first = last = END_OF_LIST;
 
         //  Generate a unique stamp from current vertex index,
-        // used for marking tetrahedra.
+        // used for marking triangles
         set_triangle_mark_stamp(v);
 
         // Pointer to the coordinates of the point to be inserted
@@ -23264,7 +23500,7 @@ namespace GEO {
         // Test whether the point already exists in
         // the triangulation. The point already exists
         // if it's located on three faces of the
-        // tetrahedron returned by locate().
+        // triangle returned by locate().
         int nb_zero = 
             (orient[0] == ZERO) +
             (orient[1] == ZERO) +
@@ -23277,7 +23513,7 @@ namespace GEO {
         //  Weighted triangulations can have dangling
         // vertices. Such vertices p are characterized by
         // the fact that p is not in conflict with the 
-        // tetrahedron returned by locate().
+        // triangle returned by locate().
         if(weighted_ && !triangle_is_conflict(t, p)) {
             return;
         }
@@ -23285,7 +23521,7 @@ namespace GEO {
         // Note: points on edges and on facets are
         // handled by the way triangle_is_in_conflict()
         // is implemented, that naturally inserts
-        // the correct tetrahedra in the conflict list.
+        // the correct triangles in the conflict list.
 
 
         // Mark t as conflict
@@ -23350,7 +23586,7 @@ namespace GEO {
                 
                 //   At this point, t is in conflict 
                 // and t2 is not in conflict. 
-                // We keep a reference to a tet on the boundary
+                // We keep a reference to a trgl on the boundary
                 t_bndry = t;
                 e_bndry = le;
                 // Mark t2 as visited (but not conflict)
@@ -23442,7 +23678,7 @@ namespace GEO {
 
        index_t new_triangle = stellate_conflict_zone(v,t_bndry,e_bndry);
        
-       // Recycle the tetrahedra of the conflict zone.
+       // Recycle the triangles of the conflict zone.
        cell_next_[last_conflict] = first_free_;
        first_free_ = first_conflict;
        
@@ -23497,7 +23733,7 @@ namespace GEO {
         // Create the first three virtual triangles surrounding it
         index_t t[3];
         for(index_t e = 0; e < 3; ++e) {
-            // In reverse order since it is an adjacent tetrahedron
+            // In reverse order since it is an adjacent triangle
             signed_index_t v1 = triangle_vertex(t0, triangle_edge_vertex(e,1));
             signed_index_t v2 = triangle_vertex(t0, triangle_edge_vertex(e,0));
             t[e] = new_triangle(VERTEX_AT_INFINITY, v1, v2);
@@ -23512,7 +23748,7 @@ namespace GEO {
         // Interconnect the three virtual triangles along their common
         // edges
         for(index_t e = 0; e < 3; ++e) {
-            // In reverse order since it is an adjacent tetrahedron
+            // In reverse order since it is an adjacent triangle
             index_t lv1 = triangle_edge_vertex(e,1);
             index_t lv2 = triangle_edge_vertex(e,0);
             set_triangle_adjacent(t[e], 1, t[lv1]);
@@ -23590,7 +23826,7 @@ namespace GEO {
 /*
                 if(verbose) {
                     std::cerr << "Checking tri: ";
-                    show_tet(t);
+                    show_tri(t);
                 }
 */
                 for(index_t le = 0; le < 3; ++le) {
@@ -24882,18 +25118,26 @@ namespace GEO {
 // no out-of-line virtual functions. It is not a
 // problem since they are only visible from this translation
 // unit, but clang will complain.
+// Silence also a warning regarding stronger memory barriers than
+// necessary.
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Wweak-vtables"
+#pragma GCC diagnostic ignored "-Watomic-implicit-seq-cst"
 #endif
 
 namespace {
     using namespace GEO;
 
     index_t thread_safe_random(index_t choices_in) {
+#ifdef GARGANTUA
+        typedef Numeric::int64 Int;
+#else
+        typedef long int Int;        
+#endif        
         signed_index_t choices = signed_index_t(choices_in);
-        static thread_local long int randomseed = 1l ;
+        static thread_local Int randomseed = 1l ;
         if (choices >= 714025l) {
-            long int newrandom = (randomseed * 1366l + 150889l) % 714025l;
+            Int newrandom = (randomseed * 1366l + 150889l) % 714025l;
             randomseed = (newrandom * 1366l + 150889l) % 714025l;
             newrandom = newrandom * (choices / 714025l) + randomseed;
             if (newrandom >= choices) {
@@ -28559,6 +28803,7 @@ namespace VBW {
 /******* extracted from periodic.cpp *******/
 
 
+
 namespace GEO {
 
     int Periodic::translation[27][3] = {
@@ -28619,8 +28864,11 @@ namespace GEO {
 // no out-of-line virtual functions. It is not a
 // problem since they are only visible from this translation
 // unit, but clang will complain.
+// Silence also a warning regarding stronger memory barriers than
+// necessary.
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Wweak-vtables"
+#pragma GCC diagnostic ignored "-Watomic-implicit-seq-cst"
 #endif
 
 // TODO:
@@ -28633,10 +28881,15 @@ namespace {
     using namespace GEO;
 
     GEO::index_t thread_safe_random_(GEO::index_t choices_in) {
+#ifdef GARGANTUA
+        typedef Numeric::int64 Int;
+#else
+        typedef long int Int;        
+#endif        
 	GEO::signed_index_t choices = signed_index_t(choices_in);
-        static thread_local long int randomseed = 1l ;
+        static thread_local Int randomseed = 1l ;
         if (choices >= 714025l) {
-            long int newrandom = (randomseed * 1366l + 150889l) % 714025l;
+            Int newrandom = (randomseed * 1366l + 150889l) % 714025l;
             randomseed = (newrandom * 1366l + 150889l) % 714025l;
             newrandom = newrandom * (choices / 714025l) + randomseed;
             if (newrandom >= choices) {
@@ -28658,12 +28911,12 @@ namespace {
 
     inline VBW::index_t pop_count(Numeric::uint32 x) {
 #if defined(GEO_COMPILER_GCC_FAMILY)
-	return GEO::index_t(Numeric::uint32(__builtin_popcount(x)));
+	return VBW::index_t(Numeric::uint32(__builtin_popcount(x)));
 #elif defined(GEO_COMPILER_MSVC)
     #if defined(_M_ARM64)
-	return GEO::index_t(_CountOneBits(x));
+	return VBW::index_t(_CountOneBits(x));
     #else
- 	return GEO::index_t(__popcnt(x));
+ 	return VBW::index_t(__popcnt(x));
     #endif
 #else
 	int result = 0;
@@ -28671,8 +28924,46 @@ namespace {
 	    result += ((x & 1) != 0);
 	    x >>= 1;
 	}
-	return GEO::index_t(result);
+	return VBW::index_t(result);
 #endif
+    }
+    
+    void delaunay_citations() {
+	geo_cite_with_info(
+	    "DBLP:journals/cj/Bowyer81",
+	    "One of the two initial references to the algorithm, "
+	    "discovered independently and simultaneously by Bowyer and Watson."
+        );
+	geo_cite_with_info(
+	    "journals/cj/Watson81",
+	    "One of the two initial references to the algorithm, "
+	    "discovered independently and simultaneously by Bowyer and Watson."
+	);
+	geo_cite_with_info(
+	    "DBLP:conf/compgeom/AmentaCR03",
+	    "Using spatial sorting has a dramatic impact on the performances."
+	);
+	geo_cite_with_info(
+	    "DBLP:journals/comgeo/FunkeMN05",
+	    "Initializing \\verb|locate()| with a non-exact version "
+	    " (structural filtering) gains (a bit of) performance."
+	);
+	geo_cite_with_info(
+	    "DBLP:journals/comgeo/BoissonnatDPTY02",
+	    "The idea of traversing the cavity from inside "
+	    " used in GEOGRAM is inspired by the implementation of "
+	    " \\verb|Delaunay_triangulation_3| in CGAL."
+	);
+	geo_cite_with_info(
+	    "DBLP:conf/imr/Si06",
+	    "The triangulation data structure used in GEOGRAM is inspired "
+	    "by Tetgen."
+	);
+	geo_cite_with_info(
+	    "DBLP:journals/ijfcs/DevillersPT02",
+	    "Analysis of the different versions of the line walk algorithm "
+	    " used by \\verb|locate()|."
+	);
     }
 }
 
@@ -29379,9 +29670,9 @@ namespace GEO {
 	    result[0] = vertices_[3*v];
 	    result[1] = vertices_[3*v+1];
 	    result[2] = vertices_[3*v+2];
-	    result[0] += double(translation[instance][0]) * period_;
-	    result[1] += double(translation[instance][1]) * period_;
-	    result[2] += double(translation[instance][2]) * period_;
+	    result[0] += double(translation[instance][0]) * period_.x;
+	    result[1] += double(translation[instance][1]) * period_.y;
+	    result[2] += double(translation[instance][2]) * period_.z;
 	}
 	
 	vec3 vertex(index_t v) const {
@@ -29401,9 +29692,9 @@ namespace GEO {
 	    result[2] = vertices_[3*v+2];
 	    result[3] = -non_periodic_weight(v);
 	    if(periodic_) {
-		result[0] += double(translation[instance][0]) * period_;
-		result[1] += double(translation[instance][1]) * period_;
-		result[2] += double(translation[instance][2]) * period_;
+		result[0] += double(translation[instance][0]) * period_.x;
+		result[1] += double(translation[instance][1]) * period_.y;
+		result[2] += double(translation[instance][2]) * period_.z;
 	    }
 	    result[3] +=
 		geo_sqr(result[0]) + geo_sqr(result[1]) + geo_sqr(result[2]);
@@ -29533,21 +29824,21 @@ namespace GEO {
 	    l = periodic_vertex_real(l);
 	    m = periodic_vertex_real(m);
 	    
-	    V[0][0] = vertices_[3*i  ] + double(translation[ii][0]) * period_;
-	    V[0][1] = vertices_[3*i+1] + double(translation[ii][1]) * period_;
-	    V[0][2] = vertices_[3*i+2] + double(translation[ii][2]) * period_;
-	    V[1][0] = vertices_[3*j  ] + double(translation[ij][0]) * period_;
-	    V[1][1] = vertices_[3*j+1] + double(translation[ij][1]) * period_;
-	    V[1][2] = vertices_[3*j+2] + double(translation[ij][2]) * period_;
-	    V[2][0] = vertices_[3*k  ] + double(translation[ik][0]) * period_;
-	    V[2][1] = vertices_[3*k+1] + double(translation[ik][1]) * period_;
-	    V[2][2] = vertices_[3*k+2] + double(translation[ik][2]) * period_;
-	    V[3][0] = vertices_[3*l  ] + double(translation[il][0]) * period_;
-	    V[3][1] = vertices_[3*l+1] + double(translation[il][1]) * period_;
-	    V[3][2] = vertices_[3*l+2] + double(translation[il][2]) * period_;
-	    V[4][0] = vertices_[3*m  ] + double(translation[im][0]) * period_;
-	    V[4][1] = vertices_[3*m+1] + double(translation[im][1]) * period_;
-	    V[4][2] = vertices_[3*m+2] + double(translation[im][2]) * period_;
+	    V[0][0] = vertices_[3*i  ] + double(translation[ii][0]) * period_.x;
+	    V[0][1] = vertices_[3*i+1] + double(translation[ii][1]) * period_.y;
+	    V[0][2] = vertices_[3*i+2] + double(translation[ii][2]) * period_.z;
+	    V[1][0] = vertices_[3*j  ] + double(translation[ij][0]) * period_.x;
+	    V[1][1] = vertices_[3*j+1] + double(translation[ij][1]) * period_.y;
+	    V[1][2] = vertices_[3*j+2] + double(translation[ij][2]) * period_.z;
+	    V[2][0] = vertices_[3*k  ] + double(translation[ik][0]) * period_.x;
+	    V[2][1] = vertices_[3*k+1] + double(translation[ik][1]) * period_.y;
+	    V[2][2] = vertices_[3*k+2] + double(translation[ik][2]) * period_.z;
+	    V[3][0] = vertices_[3*l  ] + double(translation[il][0]) * period_.x;
+	    V[3][1] = vertices_[3*l+1] + double(translation[il][1]) * period_.y;
+	    V[3][2] = vertices_[3*l+2] + double(translation[il][2]) * period_.z;
+	    V[4][0] = vertices_[3*m  ] + double(translation[im][0]) * period_.x;
+	    V[4][1] = vertices_[3*m+1] + double(translation[im][1]) * period_.y;
+	    V[4][2] = vertices_[3*m+2] + double(translation[im][2]) * period_.z;
 
 	    // Beware the parentheses, they are necessary to ensure that computations
 	    //               |                               give always the same result.
@@ -30617,7 +30908,7 @@ namespace GEO {
     private:
         PeriodicDelaunay3d* master_;
 	bool periodic_;
-	double period_;
+	vec3 period_;
         index_t nb_vertices_;
         const double* vertices_;
 	const double* weights_;
@@ -30749,6 +31040,26 @@ namespace GEO {
     ) :
 	Delaunay(3),
 	periodic_(periodic),
+	period_(period,period,period),
+	weights_(nullptr),
+	update_periodic_v_to_cell_(false),
+	has_empty_cells_(false),
+	nb_reallocations_(0),
+	convex_cell_exact_predicates_(true)
+    {
+        debug_mode_ = CmdLine::get_arg_bool("dbg:delaunay");
+        verbose_debug_mode_ = CmdLine::get_arg_bool("dbg:delaunay_verbose");
+        debug_mode_ = (debug_mode_ || verbose_debug_mode_);
+        benchmark_mode_ = CmdLine::get_arg_bool("dbg:delaunay_benchmark");
+	nb_vertices_non_periodic_ = 0;
+        delaunay_citations();
+    }
+
+    PeriodicDelaunay3d::PeriodicDelaunay3d(
+	const vec3& period
+    ) :
+	Delaunay(3),
+	periodic_(true),
 	period_(period),
 	weights_(nullptr),
 	update_periodic_v_to_cell_(false),
@@ -30756,49 +31067,13 @@ namespace GEO {
 	nb_reallocations_(0),
 	convex_cell_exact_predicates_(true)
     {
-	geo_cite_with_info(
-	    "DBLP:journals/cj/Bowyer81",
-	    "One of the two initial references to the algorithm, "
-	    "discovered independently and simultaneously by Bowyer and Watson."
-        );
-	geo_cite_with_info(
-	    "journals/cj/Watson81",
-	    "One of the two initial references to the algorithm, "
-	    "discovered independently and simultaneously by Bowyer and Watson."
-	);
-	geo_cite_with_info(
-	    "DBLP:conf/compgeom/AmentaCR03",
-	    "Using spatial sorting has a dramatic impact on the performances."
-	);
-	geo_cite_with_info(
-	    "DBLP:journals/comgeo/FunkeMN05",
-	    "Initializing \\verb|locate()| with a non-exact version "
-	    " (structural filtering) gains (a bit of) performance."
-	);
-	geo_cite_with_info(
-	    "DBLP:journals/comgeo/BoissonnatDPTY02",
-	    "The idea of traversing the cavity from inside "
-	    " used in GEOGRAM is inspired by the implementation of "
-	    " \\verb|Delaunay_triangulation_3| in CGAL."
-	);
-	geo_cite_with_info(
-	    "DBLP:conf/imr/Si06",
-	    "The triangulation data structure used in GEOGRAM is inspired "
-	    "by Tetgen."
-	);
-	geo_cite_with_info(
-	    "DBLP:journals/ijfcs/DevillersPT02",
-	    "Analysis of the different versions of the line walk algorithm "
-	    " used by \\verb|locate()|."
-	);
-	
         debug_mode_ = CmdLine::get_arg_bool("dbg:delaunay");
         verbose_debug_mode_ = CmdLine::get_arg_bool("dbg:delaunay_verbose");
         debug_mode_ = (debug_mode_ || verbose_debug_mode_);
         benchmark_mode_ = CmdLine::get_arg_bool("dbg:delaunay_benchmark");
 	nb_vertices_non_periodic_ = 0;
+        delaunay_citations();
     }
-
     
     void PeriodicDelaunay3d::set_vertices(
         index_t nb_vertices, const double* vertices
@@ -31643,11 +31918,11 @@ namespace GEO {
 
 	index_t cube_offset = C.nb_v();
 	C.clip_by_plane(vec4( 1.0, 0.0, 0.0,  0.0));
-	C.clip_by_plane(vec4(-1.0, 0.0, 0.0,  period_));
+	C.clip_by_plane(vec4(-1.0, 0.0, 0.0,  period_.x));
 	C.clip_by_plane(vec4( 0.0, 1.0, 0.0,  0.0));
-	C.clip_by_plane(vec4( 0.0,-1.0, 0.0,  period_));	
+	C.clip_by_plane(vec4( 0.0,-1.0, 0.0,  period_.y));	
 	C.clip_by_plane(vec4( 0.0, 0.0, 1.0,  0.0));
-	C.clip_by_plane(vec4( 0.0, 0.0,-1.0,  period_));
+	C.clip_by_plane(vec4( 0.0, 0.0,-1.0,  period_.z));
 
 	cell_is_outside_cube = false;
 	cell_is_on_boundary = false;
@@ -31661,12 +31936,12 @@ namespace GEO {
 	    // some unnecessary virtual vertices, but also, without
 	    // it, it would generate neighborhoods with virtual vertices
 	    // coordinates that differ by more than twice the period.
-	    C.clip_by_plane(vec4( 1.0, 0.0, 0.0,  period_));
-	    C.clip_by_plane(vec4(-1.0, 0.0, 0.0,  2.0*period_));
-	    C.clip_by_plane(vec4( 0.0, 1.0, 0.0,  period_));
-	    C.clip_by_plane(vec4( 0.0,-1.0, 0.0,  2.0*period_));	
-	    C.clip_by_plane(vec4( 0.0, 0.0, 1.0,  period_));
-	    C.clip_by_plane(vec4( 0.0, 0.0,-1.0,  2.0*period_));
+	    C.clip_by_plane(vec4( 1.0, 0.0, 0.0,  period_.x));
+	    C.clip_by_plane(vec4(-1.0, 0.0, 0.0,  2.0*period_.x));
+	    C.clip_by_plane(vec4( 0.0, 1.0, 0.0,  period_.y));
+	    C.clip_by_plane(vec4( 0.0,-1.0, 0.0,  2.0*period_.y));	
+	    C.clip_by_plane(vec4( 0.0, 0.0, 1.0,  period_.z));
+	    C.clip_by_plane(vec4( 0.0, 0.0,-1.0,  2.0*period_.z));
 
 	    // Normally we cannot have an empty cell, empty cells were
 	    // detected before.
@@ -31680,19 +31955,19 @@ namespace GEO {
 	    if(C.cell_has_conflict(vec4( 1.0, 0.0, 0.0,  0.0))) {
 		TXmin = -1;
 	    }
-	    if(C.cell_has_conflict(vec4(-1.0, 0.0, 0.0,  period_))) {
+	    if(C.cell_has_conflict(vec4(-1.0, 0.0, 0.0,  period_.x))) {
 		TXmax = 1;
 	    }
 	    if(C.cell_has_conflict(vec4( 0.0, 1.0, 0.0,  0.0))) {
 		TYmin = -1;
 	    }
-	    if(C.cell_has_conflict(vec4( 0.0,-1.0, 0.0,  period_))) {
+	    if(C.cell_has_conflict(vec4( 0.0,-1.0, 0.0,  period_.y))) {
 		TYmax = 1;
 	    }
 	    if(C.cell_has_conflict(vec4( 0.0, 0.0, 1.0,  0.0))) {
 		TZmin = -1;
 	    } 
-	    if(C.cell_has_conflict(vec4( 0.0, 0.0,-1.0,  period_))) {
+	    if(C.cell_has_conflict(vec4( 0.0, 0.0,-1.0,  period_.z))) {
 		TZmax = 1;
 	    } 
 	    for(int TX = TXmin; TX <= TXmax; ++TX) {
@@ -31984,7 +32259,7 @@ namespace GEO {
 	    sumV += C.volume();
 	}
 
-	double expectedV = period_*period_*period_;
+	double expectedV = period_.x*period_.y*period_.z;
 	
 	Logger::out("Periodic") << "Sum volumes = " << sumV << std::endl;
 	Logger::out("Periodic") << "  (expected " <<  expectedV << ")"
@@ -32018,15 +32293,1197 @@ namespace GEO {
 	    copy_Laguerre_cell_from_Delaunay(vv, C, W);
 	    if(clipped) {
 		C.clip_by_plane(vec4( 1.0, 0.0, 0.0,  0.0));
-		C.clip_by_plane(vec4(-1.0, 0.0, 0.0,  period_));
+		C.clip_by_plane(vec4(-1.0, 0.0, 0.0,  period_.x));
 		C.clip_by_plane(vec4( 0.0, 1.0, 0.0,  0.0));
-		C.clip_by_plane(vec4( 0.0,-1.0, 0.0,  period_));	
+		C.clip_by_plane(vec4( 0.0,-1.0, 0.0,  period_.y));	
 		C.clip_by_plane(vec4( 0.0, 0.0, 1.0,  0.0));
-		C.clip_by_plane(vec4( 0.0, 0.0,-1.0,  period_));
+		C.clip_by_plane(vec4( 0.0, 0.0,-1.0,  period_.z));
 	    }
 	    v_off += C.save(out, v_off, 0.1);
 	}
 	++index;
+    }
+}
+
+
+/******* extracted from CDT_2d.cpp *******/
+
+// Reference: S. W. Sloan, a fast algorithm for generating
+// constrained Delaunay triangulation, 1992,
+// Computers and Structures
+//
+// Specificities of this implementation:
+//
+// - Edges are systematically manipulated through triangles,
+// and these triangles are rotated in-place in the mesh,
+// in such a way that the edge we are talking about is
+// systematically edge 0 (with vertices 1 and 2).
+//
+// - The constraint-enforcing step manipulates a queue Q
+// of edges encoded this way. It examines pairs of triangles
+// t1,t2=Tadj(t1,0), decides whether to swap their common
+// edge (based on convexity test and intersection of
+// t1's edge 0 with the constraint). In fact, this intersection
+// test only depends on the combinatorics of (t1,t2) (two cases)
+// and the position of t1' vertex 0 relative to the constraint
+// (two cases), that makes 4 cases in total. In these cases,
+//    - t1 can either leave Q or be enqueued again
+//    - t2 was always in Q already (because it has an edge
+//      that has an intersection with the constraint), but
+//      there is one case where it leaves Q
+// DList as an O(1) function to test whether an element is in the list (using
+// flags associated with the elements). It is used in one case: when t2 is
+// is not in Q, it means there is no intersection.
+
+
+#ifndef GEOGRAM_PSM        
+#endif
+
+// Used by debugging functions and statistics
+#include <set>
+#include <deque>
+
+// #define CDT_NAIVE // use naive per-edge method (kept for reference/debugging)
+
+#ifdef GEO_DEBUG
+//#define CDT_DEBUG // display *lots* of messages and activates costly checks
+#endif
+
+#ifdef CDT_DEBUG
+#define CDT_LOG(X) std::cerr << X << std::endl
+#else
+#define CDT_LOG(X)
+#endif
+
+namespace GEO {
+
+    CDTBase2d::CDTBase2d() : nv_(0), ncnstr_(0), delaunay_(true) {
+    }
+
+    CDTBase2d::~CDTBase2d() {
+    }
+
+    void CDTBase2d::clear() {
+        nv_ = 0;
+        ncnstr_ = 0;
+        T_.resize(0);
+        Tadj_.resize(0);
+        v2T_.resize(0);
+        Tflags_.resize(0);
+        Tecnstr_.resize(0);
+        Tnext_.resize(0);
+        Tprev_.resize(0);
+    }
+
+    void CDTBase2d::create_enclosing_triangle(
+        index_t v0, index_t v1, index_t v2
+    ) {
+        nv_ = 3;
+        v2T_.resize(3);
+        geo_debug_assert(v0 <= 3);
+        geo_debug_assert(v1 <= 3);
+        geo_debug_assert(v2 <= 3);
+        index_t t0 = Tnew();
+        Tset(t0, v0, v1, v2, index_t(-1), index_t(-1), index_t(-1));
+        orient_012_ = orient2d(0,1,2);
+    }
+
+    void CDTBase2d::create_enclosing_quad(
+        index_t v0, index_t v1, index_t v2, index_t v3
+    ) {
+        nv_ = 4;
+        v2T_.resize(4);
+        geo_debug_assert(v0 <= 4);
+        geo_debug_assert(v1 <= 4);
+        geo_debug_assert(v2 <= 4);
+        geo_debug_assert(v3 <= 4);        
+        index_t t0 = Tnew();
+        index_t t1 = Tnew();        
+        Tset(t0, v0, v1, v3, t1, index_t(-1), index_t(-1));
+        Tset(t1, v3, v1, v2, index_t(-1), index_t(-1), t0);
+        orient_012_ = orient2d(0,1,2);
+        geo_debug_assert(is_convex_quad(t0));
+        if(incircle(v0,v1,v2,v3) == POSITIVE) {
+            swap_edge(t0);
+        }
+    }
+    
+    index_t CDTBase2d::insert(index_t v, index_t hint) {
+        if(v == nv()) {
+            v2T_.push_back(index_t(-1));
+            ++nv_;
+        } else {
+            geo_debug_assert(v < nv_);
+        }
+        
+        // Phase 1: find triangle that contains vertex i
+        Sign o[3];
+        index_t t = locate(v,hint,o);
+        int nb_z = (o[0] == ZERO) + (o[1] == ZERO) + (o[2] == ZERO);
+        geo_debug_assert(nb_z != 3);
+
+        // Duplicated vertex
+        if(nb_z == 2) {
+            CDT_LOG("duplicated vertex");
+            v = (o[0] != ZERO) ? Tv(t,0) :
+                (o[1] != ZERO) ? Tv(t,1) :
+                                 Tv(t,2) ;
+            v2T_.pop_back();
+            --nv_;
+            return v;
+        }
+
+        // Stack of triangle edges to examine for flipping. Ignored in
+        // non-Delaunay mode (ignored if !delaunay_)
+        // Note: it is always edge 0 that we examine, since new
+        // triangles are always created with v as vertex 0.
+        DList S(*this);
+        if(delaunay_) {
+            S.initialize(DLIST_S_ID);
+        }
+
+        // Phase 2: split triangle
+        // Particular case: v is on edge
+        if(nb_z == 1) {
+            CDT_LOG("vertex on edge");            
+            index_t le = (o[0] == ZERO) ? 0 :
+                         (o[1] == ZERO) ? 1 :
+                          2 ;
+            insert_vertex_in_edge(v,t,le,S);
+        } else {
+            insert_vertex_in_triangle(v,t,S);
+        }
+
+        // Phase 3: recursively restore Delaunay conditions for the neighbors
+        // of the new vertex
+        if(delaunay_) {
+            Delaunayize_vertex_neighbors(v,S);
+        }
+
+        return v;
+    }
+
+    
+    void CDTBase2d::insert_constraint(index_t i, index_t j) {
+        CDT_LOG("insert constraint: " << i << "-" << j);
+        debug_check_consistency();
+        ++ncnstr_;
+
+        // Index of first vertex coming from constraints intersection
+        // (keep track of it to re-Delaunayize their neighborhoods).
+        index_t first_v_isect = nv_;
+
+#ifndef CDT_NAIVE        
+        DList Q(*this, DLIST_Q_ID); // Queue of edges to constrain
+        DList N(*this); // New edges to re-Delaunayize (ignored if !delaunay_)
+        if(delaunay_) {
+            N.initialize(DLIST_N_ID);
+        }
+        while(i != j) {
+            
+            // Step 1: find all the edges that have an intersection 
+            // with the constraint [i,j], enqueue them in Q.
+            // Stop at vertex on constraint or constraint intersection
+            // if any (returned in k)
+            index_t k = find_intersected_edges(i,j,Q);
+            
+            // Step 2: constrain edges
+            constrain_edges(i,k,Q,N);
+            
+            debug_check_combinatorics(); // It is good to be paranoid 
+            
+            // Step 3: restore Delaunay condition
+            if(delaunay_) {
+                Delaunayize_new_edges(N);
+            }
+            
+            debug_check_combinatorics(); // Still paranoid...
+            
+            i = k;
+        }
+#else
+        DList Q(*this, DLIST_Q_ID); // Queue of edges to constrain
+        vector<Edge> N; // New edges to re-Delaunayize
+        while(i != j) {
+            index_t k = find_intersected_edges(i,j,Q);
+            constrain_edges_naive(i,k,Q,N);
+            debug_check_combinatorics();
+            if(delaunay_) {
+                Delaunayize_new_edges_naive(N);
+            }
+            debug_check_combinatorics();            
+            i = k;
+        }
+#endif        
+
+        debug_check_combinatorics();
+        
+        if(!delaunay_) {
+            return;
+        }
+
+        // Delaunayize triangles around vertices coming from
+        // constraint intersections
+        DList S(*this, DLIST_S_ID);        
+        for(index_t v=first_v_isect; v<nv(); ++v) {
+            // We cannot use for_each_triangle_around_vertex()
+            // because we need to Trot() t during traveral,
+            // to have v has t's vertex 0
+            // But the good news is that v is never on the border,
+            // (because it comes from an edge *intersection*),
+            // hence traversal is easier.
+            index_t t0 = vT(v); // Need to store it, because we Trot()
+            index_t t = t0;
+            do {
+                index_t lv = Tv_find(t,v);
+                Trot(t,lv);
+                geo_debug_assert(Tv(t,0) == v);
+                S.push_back(t);
+                t = Tadj(t, 1);
+                geo_debug_assert(t != index_t(-1));
+            } while(t != t0);            
+            Delaunayize_vertex_neighbors(v,S);
+        }
+
+        debug_check_consistency();        
+    }
+
+    struct CDT2d_ConstraintWalker {
+        CDT2d_ConstraintWalker(index_t i_in, index_t j_in) :
+            i(i_in), j(j_in),
+            t_prev(index_t(-1)), v_prev(index_t(-1)),
+            t(index_t(-1)), v(i_in)
+            {
+            }
+        index_t i, j;
+        index_t t_prev, v_prev;
+        index_t t, v;
+    };
+    
+    index_t CDTBase2d::find_intersected_edges(index_t i, index_t j, DList& Q) {
+        CDT_LOG("Find intersected edges: " << i << "-" << j);
+        CDT2d_ConstraintWalker W(i,j);
+        // Stop at the first encountered vertex or constraint intersection. 
+        while(W.v == i || W.v == index_t(-1)) {
+            CDT_LOG(
+                "   t=" << int(W.t) << " v=" << int(W.v) << "   "
+                "t_prev=" << int(W.t_prev) << " v_prev=" << int(W.v_prev)
+                << "   "
+            );
+            if(W.v != index_t(-1)) {
+                walk_constraint_v(W);
+            } else {
+                walk_constraint_t(W,Q);
+            }
+        }
+        return W.v;
+    }    
+
+    // The two functions below are more complicated than I wished, but is
+    // simpler than it looks like. There are two main different cases:
+    //
+    // - walk_constraint_v(): we are on a vertex.
+    //   traverse all the triangles around v and find the one that
+    //   has an intersection. For instance, when we start from vertex i,
+    //   and also when the previous step encountered a vertex exactly on
+    //   the constrained segment. It is the annoying case where one has
+    //   to traverse the triangles incident to v (using the function
+    //   for_each_T_around_v() that takes a lambda).
+    //
+    // - walk_constraint_t(): we are on an edge intersection.
+    //   propagate to the neighbor of t accross the intersected edge.
+    //   It is the "generic" case, simpler (the next triangle is
+    //   determined by the edge of t that is intersected).
+    //
+    // There are three things that makes things slightly
+    // more complicated:
+    // - each case has two sub-cases, depending on whether the next
+    //   intersection is an existing vertex.
+    // - if an existing edge is embedded in the constraint, one needs
+    //   to flag that edge as a constraint.
+    // - we need to test whether we are arrived at vertex j
+    
+    void CDTBase2d::walk_constraint_v(CDT2d_ConstraintWalker& W) {
+        geo_debug_assert(W.v != index_t(-1));        
+        geo_debug_assert(W.t == index_t(-1));
+        
+        index_t t_next = index_t(-1);
+        index_t v_next = index_t(-1);
+
+        for_each_T_around_v(
+            W.v, [&](index_t t_around_v, index_t le) {
+                if(t_around_v == W.t_prev) { // Don't go backwards !
+                    return false;
+                }
+                index_t v1 = Tv(t_around_v, (le + 1)%3);
+                index_t v2 = Tv(t_around_v, (le + 2)%3);
+                if(v1 == W.j || v2 == W.j) { // Are we arrived at j ? 
+                    v_next = W.j;
+                    // Edge is flagged as constraint here, because
+                    // it will not be seen by constraint enforcement.
+                    index_t le_cnstr_edge = (v1 == W.j) ? (le+2)%3 : (le+1)%3;
+                    Tset_edge_cnstr_with_neighbor(
+                        t_around_v, le_cnstr_edge, ncnstr_-1
+                    );
+                    CDT_LOG(
+                        " During cnstr " << W.i << "-" << W.j << ": " 
+                        << " Constrained edge "
+                        << Tv(t_around_v, (le_cnstr_edge+1)%3) << "-"
+                        << Tv(t_around_v, (le_cnstr_edge+2)%3)
+                    );
+                    return true;
+                }
+                Sign o1 = orient2d(W.i,W.j,v1);
+                Sign o2 = orient2d(W.i,W.j,v2);                        
+                Sign o3 = orient2d(v1,v2,W.j);
+                Sign o4 = orient_012_; // equivalent to orient2d(v1,v2,i)
+                if(o1*o2 < 0 && o3*o4 < 0) {
+                    Trot(t_around_v,le); // so that le becomes edge 0
+                    t_next = t_around_v; // will be added to Q during next round
+                    return true;
+                } else {
+                    // Special case: v1 or v2 is exactly on [i,j]
+                    // Edge is flagged as constraint here, because
+                    // it will not be seen by constraint enforcement.
+                    geo_debug_assert(o1 != ZERO || o2 != ZERO);
+                    if(o1 == ZERO && o3*o4 < 0 && v1 != W.v_prev) {
+                        v_next = v1;
+                        Tset_edge_cnstr_with_neighbor(
+                            t_around_v, (le + 2)%3, ncnstr_-1
+                        );
+                        return true;
+                    } else if(o2 == ZERO && o3*o4 < 0 && v2 != W.v_prev) {
+                        v_next = v2;
+                        Tset_edge_cnstr_with_neighbor(
+                            t_around_v, (le + 1)%3, ncnstr_-1
+                        );                                
+                        return true;
+                    }
+                }
+                return false;
+            }
+        ); // End of for_each_T_around_v() loop
+        W.t_prev = W.t;
+        W.v_prev = W.v;
+        W.t = t_next;
+        W.v = v_next;
+    }
+
+    void CDTBase2d::walk_constraint_t(CDT2d_ConstraintWalker& W, DList& Q) {
+        geo_debug_assert(W.v == index_t(-1));
+        geo_debug_assert(W.t != index_t(-1));
+        
+        index_t v_next = index_t(-1);
+        index_t t_next = index_t(-1);
+        
+        if(Tv(W.t,0) == W.j || Tv(W.t,1) == W.j || Tv(W.t,2) == W.j) {
+            v_next = W.j; // Are we arrived at j ? 
+        } else {
+            // Test the three edges of the triangle
+            for(index_t le = 0; le<3; ++le) {
+                if(Tadj(W.t,le) == W.t_prev) { // Do not go backwards !
+                    continue;
+                }
+                // Test whether [v1,v2] intersects the support line of (i,j).
+                // No need to test the *segment* [i,j]: we know the line enters
+                // the triangle (it is how we came here), and we know it leaves
+                // it, else j would have been one of the triangle's vertices.
+                index_t v1 = Tv(W.t, (le + 1)%3);
+                index_t v2 = Tv(W.t, (le + 2)%3);
+                Sign o1 = orient2d(W.i,W.j,v1);
+                Sign o2 = orient2d(W.i,W.j,v2);                        
+                if(o1*o2 < 0) {
+                    // [v1,v2] has a frank intersection with [i,j]
+                    Trot(W.t,le); // So that edge 0 is intersected edge
+                    if(Tedge_is_constrained(W.t,0)) {
+                        CDT_LOG("   Cnstr isect with:" << v1 << "-" << v2);
+                        v_next = create_intersection(
+                            ncnstr()-1, W.i, W.j,
+                            Tedge_cnstr(W.t,0), v1, v2
+                        );
+                        insert_vertex_in_edge(v_next,W.t,0);
+                    } else {
+                        CDT_LOG("   Isect: t=" << W.t <<" E=" << v1 <<"-"<< v2);
+                        Q.push_back(W.t);
+                        t_next = Tadj(W.t,0);
+                    }
+                    break;
+                } else { // Special case: v1 or v2 is exactly on [i,j]
+                    geo_debug_assert(o1 != ZERO || o2 != ZERO);
+                    if(o1 == ZERO) {
+                        v_next = v1;
+                        break;
+                    } else if(o2 == ZERO) {
+                        v_next = v2;
+                        break;
+                    }
+                }
+            }
+        }
+        W.t_prev = W.t;
+        W.v_prev = W.v;
+        W.t = t_next;
+        W.v = v_next;
+    }
+    
+    void CDTBase2d::constrain_edges(index_t i, index_t j, DList& Q, DList& N) {
+
+#ifdef CDT_DEBUG
+        // The function find_edge_intersections() is super complicated,
+        // so in debug mode I make sure it did its job correctly (by testing
+        // *all* edge intersections).
+        check_edge_intersections(i,j,Q);
+#endif
+        // Called each time edge le of triangle t has no isect with cnstr,
+        // (then it is a "new edge")
+        auto new_edge = [&](index_t t,index_t le) {
+            Trot(t,le);
+            if(
+                (Tv(t,1) == i && Tv(t,2) == j) ||
+                (Tv(t,1) == j && Tv(t,2) == i)
+            ) {
+                // Set constraint flag if the new edge is the constrained edge
+                Tset_edge_cnstr_with_neighbor(t,0,ncnstr_-1);
+            } else {
+                // Memorize new edge as "to be Delaunayized"
+                if(N.initialized()) {
+                    N.push_back(t);
+                }
+            }
+        };
+
+        // Called each time edge le of triangle t still has an isect with cnstr
+        // (then it is queued again)
+        auto isect_edge = [&](index_t t, index_t le) {
+            Trot(t,le);
+            Q.push_front(t);
+        };
+
+        while(!Q.empty()) {
+            index_t t1 = Q.pop_back();
+            if(!is_convex_quad(t1)) {
+                // If the only remaining edge to flip does not form a convex
+                // quad, it means we are going to flip forever ! (shoud not
+                // happen)
+                geo_assert(!Q.empty());
+                Q.push_front(t1);
+            } else {
+                index_t t2 = Tadj(t1,0);
+                bool no_isect  = !Q.contains(t2);
+                index_t v0     = Tv(t1,0);
+                bool t2v0_t1v2 = (Q.contains(t2) && Tv(t2,0) == Tv(t1,2));
+                bool t2v0_t1v1 = (Q.contains(t2) && Tv(t2,0) == Tv(t1,1));
+                geo_argused(t2v0_t1v1);
+
+                if(no_isect) {
+                    swap_edge(t1);
+                    geo_debug_assert(!segment_edge_intersect(i,j,t1,2));
+                    new_edge(t1,2);
+                } else {
+                    // See comment at beginning of file
+                    // (a small variation in Sloan's
+                    // method that makes better use of the combinatorics)
+                    Sign o = orient2d(i,j,v0);
+                    if(t2v0_t1v2) {
+                        swap_edge(t1,false); // "new t1 on top"
+                        if(o >= 0) {
+                            geo_debug_assert(!segment_edge_intersect(i,j,t1,2));
+                            geo_debug_assert( segment_edge_intersect(i,j,t2,0));
+                            new_edge(t1,2);
+                        } else {
+                            geo_debug_assert( segment_edge_intersect(i,j,t1,2));
+                            geo_debug_assert( segment_edge_intersect(i,j,t2,0));
+                            isect_edge(t1,2);
+                        }
+                    } else {
+                        geo_debug_assert(t2v0_t1v1);
+                        swap_edge(t1,true); // "new t1 on bottom"    
+                        if(o > 0) {
+                            geo_debug_assert( segment_edge_intersect(i,j,t1,1));
+                            geo_debug_assert( segment_edge_intersect(i,j,t2,0));
+                            isect_edge(t1,1); 
+                        } else {
+                            geo_debug_assert(!segment_edge_intersect(i,j,t1,1));
+                            geo_debug_assert( segment_edge_intersect(i,j,t2,0));
+                            new_edge(t1,1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void CDTBase2d::Delaunayize_vertex_neighbors(index_t v, DList& S) {
+        while(!S.empty()) {
+            index_t t1 = S.pop_back();
+            geo_debug_assert(Tv(t1,0) == v);
+            if(Tedge_is_constrained(t1,0)) {
+                continue;
+            }
+            index_t t2 = Tadj(t1,0);
+            if(t2 == index_t(-1)) {
+                continue;
+            }
+            index_t v1 = Tv(t2,0);
+            index_t v2 = Tv(t2,1);
+            index_t v3 = Tv(t2,2);
+            if(incircle(v1,v2,v3,v) == POSITIVE) {
+                swap_edge(t1);
+                S.push_back(t1);
+                S.push_back(t2);                    
+            }
+        }
+    }
+    
+    void CDTBase2d::Delaunayize_new_edges(DList& N) {
+        bool swap_occured = true;
+        while(swap_occured) {
+            swap_occured = false;
+            for(index_t t1 = N.front(); t1 != index_t(-1); t1 = N.next(t1)) {
+                if(Tedge_is_constrained(t1,0)) {
+                    continue;
+                }
+                index_t v1 = Tv(t1,1);
+                index_t v2 = Tv(t1,2);
+                index_t v0 = Tv(t1,0);
+                index_t t2 = Tadj(t1,0);
+                if(t2 == index_t(-1)) {
+                    continue;
+                }
+                index_t e2 = Tadj_find(t2,t1);
+                index_t v3 = Tv(t2,e2);
+                if(incircle(v0,v1,v2,v3) == POSITIVE) {
+                    // t2 may also encode a new edge, we need to preserve it,
+                    // by chosing the right swap:
+                    if(Tv(t2,0) == Tv(t1,1)) {
+                        swap_edge(t1, true); // t2 on top
+                        Trot(t1,1);
+                    } else {
+                        swap_edge(t1, false); // t1 on top
+                        Trot(t1,2);
+                    }
+                    swap_occured = true;
+                } 
+            }
+        }
+        N.clear();
+    }
+
+    index_t CDTBase2d::locate(index_t v, index_t hint, Sign* o) const {
+        Sign o_local[3];
+        if(o == nullptr) {
+            o = o_local;
+        }
+
+        // Efficient locate, "walking the triangulation"
+        index_t nb_traversed_t = 0;
+        index_t t_pred = nT()+1; // Needs to be different from index_t(-1)
+        index_t t = (hint == index_t(-1)) ?
+                     index_t(Numeric::random_int32()) % nT() :
+                     hint ;
+    still_walking:
+        {
+            ++nb_traversed_t;
+
+            // Infinite loop are not supposed to happen, but
+            // let us detect them, just in case...
+            geo_debug_assert(nb_traversed_t <= 2*nT());
+            
+            // You will land here if we try to locate a point outside
+            // the boundary
+            bool point_outside_boundary = (t == index_t(-1));
+            geo_assert(!point_outside_boundary);
+             
+            index_t tv[3];
+            tv[0] = Tv(t,0);
+            tv[1] = Tv(t,1);
+            tv[2] = Tv(t,2);
+            
+            // Start from a random edge
+            index_t e0 = index_t(Numeric::random_int32()) % 3;
+            for(index_t de = 0; de < 3; ++de) {
+                index_t le = (e0 + de) % 3;
+                
+                index_t t_next = Tadj(t,le);
+
+                //   If the candidate next triangle is the
+                // one we came from, then we know already that
+                // the orientation is positive, thus we examine
+                // the next candidate (or exit the loop if they
+                // are exhausted).
+                //
+                // (here is why intial value of t_pred needs to be
+                // different from index_t(-1))
+                if(t_next == t_pred) {
+                    o[le] = POSITIVE;
+                    continue ; 
+                }
+
+                // To test the orientation of p w.r.t. the facet f of
+                // t, we replace vertex number f with p in t (same
+                // convention as in CGAL).
+                index_t v_bkp = tv[le];
+                tv[le] = v;
+                o[le] = Sign(orient_012_ * orient2d(tv[0], tv[1], tv[2]));
+                
+                // If the orientation is not negative, then we cannot
+                // walk towards t_next, and examine the next candidate
+                // (or exit the loop if they are exhausted).
+                if(o[le] != NEGATIVE) {
+                    tv[le] = v_bkp;
+                    continue;
+                }
+
+                // If we reach this point, then t_next is a valid
+                // successor, thus we are still walking.
+                t_pred = t;
+                t = t_next;
+                goto still_walking;
+            }
+        }
+
+        return t;
+    }
+
+    void CDTBase2d::remove_external_triangles() {
+        DList S(*this, DLIST_S_ID);
+
+        // Step 1: get triangles adjacent to the border
+        for(index_t t=0; t<nT(); ++t) {
+            if(
+                (!Tedge_is_constrained(t,0) && Tadj(t,0) == index_t(-1)) ||
+                (!Tedge_is_constrained(t,1) && Tadj(t,1) == index_t(-1)) ||
+                (!Tedge_is_constrained(t,2) && Tadj(t,2) == index_t(-1))
+            ) {
+                Tset_flag(t, T_MARKED_FLAG);
+                S.push_back(t);
+            }
+        }
+
+        // Step 2: recursive traversal
+        while(!S.empty()) {
+            index_t t1 = S.pop_back();
+            for(index_t le=0; le<3; ++le) {
+                index_t t2 = Tadj(t1,le); 
+                if(
+                    t2 != index_t(-1) &&
+                    !Tedge_is_constrained(t1,le) && 
+                    !Tflag_is_set(t2,T_MARKED_FLAG)
+                ) {
+                    Tset_flag(t2, T_MARKED_FLAG);
+                    S.push_back(t2);
+                }
+            }
+        }
+
+        // Step 3: compute old2new map
+        // (use Tnext_'s storage, that we do not need now)
+        vector<index_t>& old2new = Tnext_;
+        index_t cur_t_new = 0;
+        for(index_t t=0; t<nT(); ++t) {
+            if(Tflag_is_set(t,T_MARKED_FLAG)) {
+                old2new[t] = index_t(-1);
+            } else {
+                old2new[t] = cur_t_new;
+                ++cur_t_new;
+            }
+        }
+        index_t nT_new = cur_t_new;
+
+        // Step 4: translate adjacency and move triangles
+        for(index_t t=0; t<nT(); ++t) {
+            index_t t_new = old2new[t];
+            if(t_new == index_t(-1)) {
+                continue;
+            }
+            index_t adj0 = Tadj(t,0);
+            if(adj0 != index_t(-1)) {
+                adj0 = old2new[adj0];
+            }
+            index_t adj1 = Tadj(t,1);
+            if(adj1 != index_t(-1)) {
+                adj1 = old2new[adj1];
+            }
+            index_t adj2 = Tadj(t,2);
+            if(adj2 != index_t(-1)) {
+                adj2 = old2new[adj2];
+            }
+            Tset(
+                t_new,
+                Tv(t,0), Tv(t,1), Tv(t,2),
+                adj0, adj1, adj2,
+                Tedge_cnstr(t,0), Tedge_cnstr(t,1), Tedge_cnstr(t,2)
+            );
+            Tflags_[t_new] = 0;
+        }
+
+        // Step 5: resize arrays
+        T_.resize(3*nT_new);
+        Tadj_.resize(3*nT_new);
+        Tflags_.resize(nT_new);
+        Tecnstr_.resize(3*nT_new);
+        Tnext_.resize(nT_new);
+        Tprev_.resize(nT_new);
+
+        // Step 6: fix v2T_
+        for(index_t t=0; t<nT(); ++t) {
+            v2T_[Tv(t,0)] = t;
+            v2T_[Tv(t,1)] = t;
+            v2T_[Tv(t,2)] = t;            
+        }
+    }
+
+    
+    
+    
+    void CDTBase2d::insert_vertex_in_edge(
+        index_t v, index_t t, index_t le1, DList& S
+    ) {
+        index_t cnstr = Tedge_cnstr(t,le1);
+        index_t t1 = t;
+        index_t t2 = Tadj(t1,le1);
+        index_t v1 = Tv(t1,le1);
+        index_t v2 = Tv(t1,(le1+1)%3);
+        index_t v3 = Tv(t1,(le1+2)%3);
+        index_t t1_adj2 = Tadj(t1,(le1+1)%3);
+        index_t t1_adj3 = Tadj(t1,(le1+2)%3);
+        if(t2 != index_t(-1)) {
+            // New vertex is on an edge of t1 and t1 has a neighbor
+            // accross that edge. Discard the two triangles t1 and t2
+            // adjacent to the edge, and create four new triangles
+            // (t1 and t2 are recycled).
+            index_t le2 = Tadj_find(t2,t1);
+            geo_debug_assert(Tv(t2, (le2+1)%3) == v3);
+            geo_debug_assert(Tv(t2, (le2+2)%3) == v2);
+            index_t v4 = Tv(t2,le2);
+            index_t t2_adj2 = Tadj(t2,(le2+1)%3);
+            index_t t2_adj3 = Tadj(t2,(le2+2)%3);
+            index_t t3 = Tnew();
+            index_t t4 = Tnew();
+            Tset(t1,v,v1,v2,t1_adj3,t2,t4);
+            Tset(t2,v,v2,v4,t2_adj2,t3,t1);
+            Tset(t3,v,v4,v3,t2_adj3,t4,t2);
+            Tset(t4,v,v3,v1,t1_adj2,t1,t3);
+            Tadj_back_connect(t1,0,t1);
+            Tadj_back_connect(t2,0,t2);
+            Tadj_back_connect(t3,0,t2);
+            Tadj_back_connect(t4,0,t1);
+            Tset_edge_cnstr(t1,1,cnstr);
+            Tset_edge_cnstr(t2,2,cnstr);
+            Tset_edge_cnstr(t3,1,cnstr);
+            Tset_edge_cnstr(t4,2,cnstr);
+            if(S.initialized()) {
+                S.push_back(t1);
+                S.push_back(t2);
+                S.push_back(t3);
+                S.push_back(t4);                
+            }
+        } else {
+            // New vertex is on an edge of t1 and t1 has no neighbor
+            // accross that edge. Discard t1 and replace it with two
+            // new triangles (recycle t1).
+            t2 = Tnew();
+            Tset(t1,v,v1,v2,t1_adj3,index_t(-1),t2);
+            Tset(t2,v,v3,v1,t1_adj2,t1,index_t(-1));
+            Tadj_back_connect(t1,0,t1);
+            Tadj_back_connect(t2,0,t1);            
+            Tset_edge_cnstr(t1,1,cnstr);
+            Tset_edge_cnstr(t2,2,cnstr);
+            if(S.initialized()) {
+                S.push_back(t1);
+                S.push_back(t2);
+            }
+        }
+    }
+
+    void CDTBase2d::insert_vertex_in_triangle(index_t v, index_t t, DList& S) {
+        // New vertex is in t1. Discard t1 and replace it with three
+        // new triangles (recycle t1).
+        index_t t1 = t;
+        index_t v1 = Tv(t1,0);
+        index_t v2 = Tv(t1,1);
+        index_t v3 = Tv(t1,2);
+        index_t adj1 = Tadj(t1,0);
+        index_t adj2 = Tadj(t1,1);
+        index_t adj3 = Tadj(t1,2);
+        index_t t2 = Tnew();
+        index_t t3 = Tnew();
+        Tset(t1,v,v2,v3,adj1,t2,t3);
+        Tset(t2,v,v3,v1,adj2,t3,t1);
+        Tset(t3,v,v1,v2,adj3,t1,t2);
+        Tadj_back_connect(t1,0,t1);
+        Tadj_back_connect(t2,0,t1);
+        Tadj_back_connect(t3,0,t1);
+        if(S.initialized()) {
+            S.push_back(t1);
+            S.push_back(t2);
+            S.push_back(t3);            
+        }
+    }
+    
+    void CDTBase2d::swap_edge(index_t t1, bool swap_t1_t2) {
+        geo_debug_assert(!Tedge_is_constrained(t1,0));
+        index_t v1 = Tv(t1,0);
+        index_t v2 = Tv(t1,1);
+        index_t v3 = Tv(t1,2);                        
+        index_t t1_adj2 = Tadj(t1,1);
+        index_t t1_adj3 = Tadj(t1,2);
+        index_t t2 = Tadj(t1,0);
+        index_t le2 = Tadj_find(t2,t1);
+        index_t v4 = Tv(t2,le2);
+        geo_debug_assert(Tv(t2,(le2+1)%3) == v3);
+        geo_debug_assert(Tv(t2,(le2+2)%3) == v2);
+        
+        debug_Tcheck(t1);
+        debug_Tcheck(t2);
+        
+        index_t t2_adj2 = Tadj(t2,(le2+1)%3);
+        index_t t2_adj3 = Tadj(t2,(le2+2)%3);
+        if(swap_t1_t2) {
+            Tset(t2,v1,v4,v3,t2_adj3,t1_adj2,t1);
+            Tset(t1,v1,v2,v4,t2_adj2,t2,t1_adj3);
+            Tadj_back_connect(t2,0,t2);
+            Tadj_back_connect(t2,1,t1);
+            Tadj_back_connect(t1,0,t2);
+            Tadj_back_connect(t1,2,t1);
+        } else {
+            Tset(t1,v1,v4,v3,t2_adj3,t1_adj2,t2);
+            Tset(t2,v1,v2,v4,t2_adj2,t1,t1_adj3);
+            Tadj_back_connect(t1,0,t2);
+            Tadj_back_connect(t1,1,t1);
+            Tadj_back_connect(t2,0,t2);
+            Tadj_back_connect(t2,2,t1);
+        }
+
+        debug_Tcheck(t1);
+        debug_Tcheck(t2);
+    }
+
+    
+    
+    bool CDTBase2d::is_convex_quad(index_t t) const {
+        index_t v1 = Tv(t,0);
+        index_t v2 = Tv(t,1);
+        index_t v3 = Tv(t,2);        
+        index_t t2 = Tadj(t,0);
+        index_t le2 = Tadj_find(t2,t);
+        index_t v4 = Tv(t2,le2);
+
+        Sign o1 = orient2d(v2,v1,v4);
+        Sign o2 = orient2d(v4,v2,v3);
+        Sign o3 = orient2d(v3,v4,v1);
+        Sign o4 = orient2d(v1,v3,v2);
+
+        bool result = (
+            o1*o2 > 0 &&
+            o2*o3 > 0 &&
+            o3*o4 > 0 &&
+            o4*o1 > 0
+        );
+        
+        return result;
+    }
+
+    
+
+    bool CDTBase2d::Tedge_is_Delaunay(index_t t1, index_t le1) const {
+        if(Tedge_is_constrained(t1,le1)) {
+            return true;
+        }
+        index_t t2 = Tadj(t1,le1);
+        if(t2 == index_t(-1)) {
+            return true;
+        }
+        index_t le2 = Tadj_find(t2,t1);
+        index_t v1 = Tv(t1,le1);
+        index_t v2 = Tv(t1,(le1+1)%3);
+        index_t v3 = Tv(t1,(le1+2)%3);
+        index_t v4 = Tv(t2,le2);
+        return incircle(v1,v2,v3,v4) <= 0;
+    }
+
+    void CDTBase2d::check_edge_intersections(
+        index_t v1, index_t v2, const DList& Q
+    ) {
+        std::set<Edge> I;
+        auto make_edge = [](index_t w1, index_t w2)->Edge {
+            return std::make_pair(std::min(w1,w2), std::max(w1,w2));
+        };
+        for(index_t t=Q.front(); t!=index_t(-1); t = Q.next(t)) {
+            geo_assert(segment_edge_intersect(v1,v2,t,0));
+            I.insert(make_edge(Tv(t,1), Tv(t,2)));
+        }
+        for(index_t t=0; t<nT(); ++t) {
+            for(index_t le=0; le<3; ++le) {
+                if(segment_edge_intersect(v1,v2,t,le)) {
+                    index_t w1 = Tv(t,(le+1)%3);
+                    index_t w2 = Tv(t,(le+2)%3);
+                    geo_assert(I.find(make_edge(w1,w2)) != I.end());
+                }
+            }
+        }
+    }
+
+    
+    
+    index_t CDTBase2d::locate_naive(index_t v, index_t hint, Sign* o) const {
+        geo_argused(hint);
+        Sign o_local[3];
+        if(o == nullptr) {
+            o = o_local;
+        }
+
+        for(index_t t=0; t<nT(); ++t) {
+            index_t i = Tv(t,0);
+            index_t j = Tv(t,1);
+            index_t k = Tv(t,2);
+            o[0] = orient2d(v,j,k);
+            o[1] = orient2d(v,k,i);
+            o[2] = orient2d(v,i,j);
+            if(o[0]*o[1] >= 0 && o[1]*o[2] >= 0 && o[2]*o[0] >= 0) {
+                return t;
+            }
+        }
+        geo_assert_not_reached;
+    }
+    
+    void CDTBase2d::Delaunayize_new_edges_naive(vector<Edge>& N) {
+        for(Edge E: N) {
+            index_t v1 = std::min(E.first,E.second);
+            index_t v2 = std::max(E.first,E.second);
+            if(v2 < v1) {
+                std::swap(v1,v2);
+            }
+            CDT_LOG("new edge: " << v1 << " " << v2);
+        }
+        bool swap_occured = true;
+        while(swap_occured) {
+            swap_occured = false;
+            for(Edge& E: N) {
+                index_t t1 = eT(E);
+                if(Tedge_is_constrained(t1,0)) {
+                    continue;
+                }
+                index_t v1 = Tv(t1,1);
+                index_t v2 = Tv(t1,2);
+                index_t v0 = Tv(t1,0);
+                index_t t2 = Tadj(t1,0);
+                if(t2 == index_t(-1)) {
+                    continue;
+                }
+                index_t e2 = Tadj_find(t2,t1);
+                index_t v3 = Tv(t2,e2);
+                if(incircle(v0,v1,v2,v3) == POSITIVE) {
+                    swap_edge(t1);
+                    E = std::make_pair(Tv(t1,0), Tv(t1,1));
+                    swap_occured = true;
+                } 
+            }
+        }
+        N.resize(0);
+    }
+    
+    void CDTBase2d::constrain_edges_naive(
+        index_t i, index_t j, DList& Q_in, vector<Edge>& N
+    ) {
+        CDT_LOG("Q size=" << Q_in.size());
+        
+        std::deque<Edge> Q;
+        for(index_t t=Q_in.front(); t != index_t(-1); t = Q_in.next(t)) {
+            Q.push_back(std::make_pair(Tv(t,1), Tv(t,2)));
+        }
+        Q_in.clear();
+
+        for(index_t t=0; t<nT(); ++t) {
+            geo_debug_assert(!Tis_in_list(t));
+        }
+
+        while(Q.size() != 0) {
+            Edge E = Q.back();
+            Q.pop_back();
+            if(!is_convex_quad(eT(E))) {
+                if(Q.size() == 0) {
+                    CDT_LOG("... infinite iteration");
+                    abort();
+                }
+                Q.push_front(E);
+            } else {
+                index_t t = eT(E);                                
+                swap_edge(t);
+                E = std::make_pair(Tv(t,0), Tv(t,1));
+                if(segment_segment_intersect(i,j,E.first,E.second)) {
+                    Q.push_front(E);
+                } else {
+                    if(
+                        (E.first == i && E.second == j) ||
+                        (E.first == j && E.second == i)
+                    ) {
+                        Tset_edge_cnstr_with_neighbor(eT(E),0,ncnstr_-1);
+                    } else {
+                        N.push_back(E);
+                    }
+                }
+            }
+        }
+    }
+    
+    
+
+    CDT2d::CDT2d() {
+    }
+    
+    CDT2d::~CDT2d() {
+    }
+    
+    void CDT2d::clear() {
+        CDTBase2d::clear();
+        point_.resize(0);
+    }
+    
+    void CDT2d::create_enclosing_triangle(
+        const vec2& p1, const vec2& p2, const vec2& p3
+    ) {
+        geo_assert(nv() == 0);
+        geo_assert(nT() == 0);        
+        point_.push_back(p1);
+        point_.push_back(p2);
+        point_.push_back(p3);
+        CDTBase2d::create_enclosing_triangle(0,1,2);
+    }
+
+    void CDT2d::create_enclosing_quad(
+        const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4
+    ) {
+        geo_assert(nv() == 0);
+        geo_assert(nT() == 0);        
+        point_.push_back(p1);
+        point_.push_back(p2);
+        point_.push_back(p3);        
+        point_.push_back(p4);
+        CDTBase2d::create_enclosing_quad(0,1,2,3);
+    }
+    
+    Sign CDT2d::orient2d(index_t i, index_t j, index_t k) const {
+        geo_debug_assert(i < nv());
+        geo_debug_assert(j < nv());
+        geo_debug_assert(k < nv());
+        return PCK::orient_2d(
+            point_[i].data(), point_[j].data(), point_[k].data()
+        );
+    }
+
+    Sign CDT2d::incircle(index_t i, index_t j, index_t k, index_t l) const {
+        geo_debug_assert(i < nv());
+        geo_debug_assert(j < nv());
+        geo_debug_assert(k < nv());
+        geo_debug_assert(l < nv());
+        return PCK::in_circle_2d_SOS(
+            point_[i].data(), point_[j].data(), point_[k].data(),
+            point_[l].data()
+        );
+    }
+
+    index_t CDT2d::create_intersection(
+        index_t E1, index_t i, index_t j,
+        index_t E2, index_t k, index_t l
+    ) {
+        geo_argused(E1);
+        geo_argused(E2);        
+        geo_debug_assert(i < nv());
+        geo_debug_assert(j < nv());
+        geo_debug_assert(k < nv());
+        geo_debug_assert(l < nv());
+        geo_debug_assert(E1 < ncnstr());
+        geo_debug_assert(E2 < ncnstr());
+        vec2 U = point_[j] - point_[i];
+        vec2 V = point_[l] - point_[k];
+        vec2 D = point_[k] - point_[i];
+        double delta = det(U,V);
+        double t = det(D,V)/delta;
+        vec2 P = point_[i] + t*U;
+        point_.push_back(P);
+        v2T_.push_back(index_t(-1));
+        index_t v = nv_;
+        ++nv_;
+        return v;
+    }
+
+    void CDT2d::insert(index_t nb_points, const double* points) {
+        CDT_LOG("Inserting " << nb_points << " points");
+        debug_check_consistency();
+        index_t v_offset = nv();
+        point_.reserve(point_.size()+nb_points);
+        v2T_.resize(v2T_.size()+nb_points, index_t(-1));
+        for(index_t i=0; i<nb_points; ++i) {
+            point_.push_back(vec2(points+2*i));
+        }
+        nv_+=nb_points;
+        vector<index_t> sorted_indices;
+        compute_BRIO_order(nb_points, points, sorted_indices, 2, 2);
+        index_t hint = index_t(-1);
+        for(index_t i=0; i<nb_points; ++i) {
+            index_t v = CDTBase2d::insert(v_offset+sorted_indices[i], hint);
+            hint = vT(v);
+        }
+        CDT_LOG("Inserted.");
+        debug_check_consistency();        
+    }
+    
+    void CDT2d::save(const std::string& filename) const {
+#ifndef GEOGRAM_PSM        
+        Mesh M;
+        M.vertices.set_dimension(2);
+        for(const vec2& P: point_) {
+            M.vertices.create_vertex(P.data());
+        }
+        for(index_t t=0; t<nT(); ++t) {
+            index_t i = Tv(t,0);
+            index_t j = Tv(t,1);
+            index_t k = Tv(t,2);
+            M.facets.create_triangle(i,j,k);
+        }
+
+        
+        Attribute<double> tex_coord;
+        tex_coord.create_vector_attribute(
+            M.facet_corners.attributes(), "tex_coord", 2
+        );
+        static double triangle_tex[3][2] = {
+            {0.0, 0.0},
+            {1.0, 0.0},
+            {0.0, 1.0}
+        };
+        for(index_t c: M.facet_corners) {
+            tex_coord[2*c]   = triangle_tex[c%3][0];
+            tex_coord[2*c+1] = triangle_tex[c%3][1];
+        }
+
+        Attribute<bool> constraint(M.facet_corners.attributes(), "constraint");
+        for(index_t c: M.facet_corners) {
+            index_t t  = c/3;
+            index_t lv = c%3;
+            constraint[c] =
+                Tedge_is_constrained(t, (lv+1)%3) ||
+                Tedge_is_constrained(t, (lv+2)%3) ; 
+        }
+        
+        mesh_save(M, filename);
+#else
+        if(!String::string_ends_with(filename,".obj")) {
+            Logger::err("CDT_2d")
+                << "save() only supports .obj file format in PSM"
+                << std::endl;
+            return;
+        }
+        std::ofstream out(filename);
+        for(index_t v=0; v<nv(); ++v) {
+            out << "v " << point(v) << std::endl;
+        }
+        for(index_t t=0; t<nT(); ++t) {
+            out << "f " << Tv(t,0)+1 << " " << Tv(t,1)+1 << " " << Tv(t,2)+1
+                << std::endl;
+        }
+#endif        
     }
 }
 

@@ -440,14 +440,7 @@ namespace GEO {
 #include <float.h>
 #include <limits.h>
 #include <algorithm> // for std::min / std::max
-
-// Visual C++ ver. < 2010 does not have C99 stdint.h,
-// using a fallback portable one.
-#if defined(GEO_OS_WINDOWS) && (_MSC_VER < 1600)
-#else
 #include <stdint.h>
-#endif
-
 #include <limits>
 
 #ifndef M_PI
@@ -657,7 +650,9 @@ namespace GEO {
             ::memcpy(to, from, size);
         }
 
-	inline pointer function_pointer_to_generic_pointer(function_pointer fptr) {
+	inline pointer function_pointer_to_generic_pointer(
+            function_pointer fptr
+        ) {
 	    // I know this is ugly, but I did not find a simpler warning-free
 	    // way that is portable between all compilers.
 	    pointer result = nullptr;
@@ -665,7 +660,9 @@ namespace GEO {
 	    return result;
 	}
 
-	inline function_pointer generic_pointer_to_function_pointer(pointer ptr) {
+	inline function_pointer generic_pointer_to_function_pointer(
+            pointer ptr
+        ) {
 	    // I know this is ugly, but I did not find a simpler warning-free
 	    // way that is portable between all compilers.
 	    function_pointer result = nullptr;
@@ -2531,7 +2528,7 @@ namespace GEO {
 
         void GEOGRAM_API set_client(ProgressClient* client);
 
-        GEOGRAM_API const ProgressTask* current_task();
+        GEOGRAM_API const ProgressTask* current_progress_task();
 
         void GEOGRAM_API cancel();
 
@@ -3894,17 +3891,19 @@ namespace GEO {
 
     
 
-    inline double det2x2(
-        double a11, double a12,                    
-        double a21, double a22
+    template <class T>
+    inline T det2x2(
+        const T& a11, const T& a12,                    
+        const T& a21, const T& a22
     ) {                                 
         return a11*a22-a12*a21 ;
     }
 
-    inline double det3x3(
-        double a11, double a12, double a13,                
-        double a21, double a22, double a23,                
-        double a31, double a32, double a33
+    template <class T>    
+    inline T det3x3(
+        const T& a11, const T& a12, const T& a13,                
+        const T& a21, const T& a22, const T& a23,                
+        const T& a31, const T& a32, const T& a33
     ) {
     return
          a11*det2x2(a22,a23,a32,a33)   
@@ -3913,23 +3912,24 @@ namespace GEO {
     }   
 
 
-    inline double det4x4(
-        double a11, double a12, double a13, double a14,
-        double a21, double a22, double a23, double a24,               
-        double a31, double a32, double a33, double a34,  
-        double a41, double a42, double a43, double a44  
+    template <class T>    
+    inline T det4x4(
+        const T& a11, const T& a12, const T& a13, const T& a14,
+        const T& a21, const T& a22, const T& a23, const T& a24,               
+        const T& a31, const T& a32, const T& a33, const T& a34,  
+        const T& a41, const T& a42, const T& a43, const T& a44  
     ) {
-        double m12 = a21*a12 - a11*a22;
-        double m13 = a31*a12 - a11*a32;
-        double m14 = a41*a12 - a11*a42;
-        double m23 = a31*a22 - a21*a32;
-        double m24 = a41*a22 - a21*a42;
-        double m34 = a41*a32 - a31*a42;
+        T m12 = a21*a12 - a11*a22;
+        T m13 = a31*a12 - a11*a32;
+        T m14 = a41*a12 - a11*a42;
+        T m23 = a31*a22 - a21*a32;
+        T m24 = a41*a22 - a21*a42;
+        T m34 = a41*a32 - a31*a42;
 
-        double m123 = m23*a13 - m13*a23 + m12*a33;
-        double m124 = m24*a13 - m14*a23 + m12*a43;
-        double m134 = m34*a13 - m14*a33 + m13*a43;
-        double m234 = m34*a23 - m24*a33 + m23*a43;
+        T m123 = m23*a13 - m13*a23 + m12*a33;
+        T m124 = m24*a13 - m14*a23 + m12*a43;
+        T m134 = m34*a13 - m14*a33 + m13*a43;
+        T m234 = m34*a23 - m24*a33 + m23*a43;
         
         return (m234*a14 - m134*a24 + m124*a34 - m123*a44);
     }   
@@ -4362,6 +4362,11 @@ namespace GEO {
             return cross(p2 - p1, p3 - p1);
         }
 
+        coord_index_t GEOGRAM_API triangle_normal_axis(
+            const vec3& p1, const vec3& p2, const vec3& p3
+        );
+
+        
 	inline double triangle_area_3d(
 	    const double* p1, const double* p2, const double* p3
 	) {
@@ -4835,7 +4840,6 @@ namespace GEO {
         }
 #endif
 
-	
         Sign GEOGRAM_API orient_2dlifted_SOS(
             const double* p0, const double* p1,
             const double* p2, const double* p3, 
@@ -4895,6 +4899,21 @@ namespace GEO {
 	    const double* p0, const double* p1, const double* p2
 	);
 
+#ifndef GEOGRAM_PSM
+
+	inline bool aligned_3d(
+	    const vec3& p0, const vec3& p1, const vec3& p2
+	) {
+            return aligned_3d(p0.data(), p1.data(), p2.data());
+        }
+        
+	inline Sign dot_3d(
+	    const vec3& p0, const vec3& p1, const vec3& p2
+	) {
+            return dot_3d(p0.data(), p1.data(), p2.data());
+        }
+#endif
+	
 	Sign GEOGRAM_API dot_compare_3d(
 	    const double* v0, const double* v1, const double* v2
 	);
@@ -4984,6 +5003,13 @@ namespace GEO {
             bool skip_empty_fields = true
         );
 
+        void GEOGRAM_API split_string(
+            const std::string& in,
+            const std::string& separator,
+            std::vector<std::string>& out,
+            bool skip_empty_fields = true
+        );
+        
         bool GEOGRAM_API split_string(
             const std::string& in,
             char separator,
@@ -5615,10 +5641,44 @@ namespace GEO {
             return set_arg(name, std::string(value));
         }
 
-        void GEOGRAM_API set_arg(const std::string& name, int value);
+        void GEOGRAM_API set_arg(const std::string& name, Numeric::int32 value);
 
-        void GEOGRAM_API set_arg(const std::string& name, unsigned int value);
+        /*
+         * \brief Sets an argument value from an integer
+         * \details This replaces the value of argument \p name by the given
+         * integer \p value. If the declared type of the argument is not
+         * compatible with an integer then the function aborts (compatible
+         * argument types are: int, double or string). If the argument does
+         * not exist, it is added as a new argument of undefined type.
+         * \param[in] name the argument name
+         * \param[in] value the new value as an integer
+         */
+        void GEOGRAM_API set_arg(const std::string& name, Numeric::uint32 value);
 
+        /*
+         * \brief Sets an argument value from an integer
+         * \details This replaces the value of argument \p name by the given
+         * integer \p value. If the declared type of the argument is not
+         * compatible with an integer then the function aborts (compatible
+         * argument types are: int, double or string). If the argument does
+         * not exist, it is added as a new argument of undefined type.
+         * \param[in] name the argument name
+         * \param[in] value the new value as an integer
+         */
+        void GEOGRAM_API set_arg(const std::string& name, Numeric::int64 value);
+
+        /*
+         * \brief Sets an argument value from an integer
+         * \details This replaces the value of argument \p name by the given
+         * integer \p value. If the declared type of the argument is not
+         * compatible with an integer then the function aborts (compatible
+         * argument types are: int, double or string). If the argument does
+         * not exist, it is added as a new argument of undefined type.
+         * \param[in] name the argument name
+         * \param[in] value the new value as an integer
+         */
+        void GEOGRAM_API set_arg(const std::string& name, Numeric::uint64 value);
+        
         void GEOGRAM_API set_arg(const std::string& name, double value);
 
         void GEOGRAM_API set_arg(const std::string& name, bool value);
@@ -7144,7 +7204,9 @@ namespace GEO {
 
     protected:
 
-        static index_t find_3(const signed_index_t* T, signed_index_t v) {
+        static inline index_t find_3(
+            const signed_index_t* T, signed_index_t v
+        ) {
             // The following expression is 10% faster than using
             // if() statements. This uses the C++ norm, that 
             // ensures that the 'true' boolean value converted to 
@@ -7278,7 +7340,7 @@ namespace GEO {
 		 String::to_string(periodic_vertex_instance(v)) ;
 	 }
 
-	 std::string binary_to_string(index_t m) const {
+	 std::string binary_to_string(Numeric::uint32 m) const {
 	     std::string s(32,' ');
 	     for(index_t i=0; i<32; ++i) {
 		 s[i] = ((m & (1u << (31u-i))) != 0) ? '1' : '0'; 
@@ -7346,9 +7408,10 @@ namespace GEO {
 	    }
         };
 	
-	
         PeriodicDelaunay3d(bool periodic, double period=1.0);
 
+        PeriodicDelaunay3d(const vec3& period);
+        
         void set_vertices(
             index_t nb_vertices, const double* vertices
         ) override;
@@ -7369,9 +7432,9 @@ namespace GEO {
 	    index_t instance = v/nb_vertices_non_periodic_;
 	    v = v%nb_vertices_non_periodic_;
 	    vec3 result(vertices_ + 3*v);
-	    result.x += double(translation[instance][0]) * period_;
-	    result.y += double(translation[instance][1]) * period_;
-	    result.z += double(translation[instance][2]) * period_;
+	    result.x += double(translation[instance][0]) * period_.x;
+	    result.y += double(translation[instance][1]) * period_.y;
+	    result.z += double(translation[instance][2]) * period_.z;
 	    return result;
 	}
 
@@ -7457,7 +7520,7 @@ namespace GEO {
         friend class PeriodicDelaunay3dThread;
 	
 	bool periodic_;
-	double period_;
+        vec3 period_;
 	
 	const double* weights_;
         vector<signed_index_t> cell_to_v_store_;
@@ -7489,6 +7552,739 @@ namespace GEO {
     };
     
 
+}
+
+#endif
+
+/******* extracted from CDT_2d.h *******/
+
+#ifndef GEOGRAM_DELAUNAY_CDT_2D
+#define GEOGRAM_DELAUNAY_CDT_2D
+
+#include <functional>
+
+
+namespace GEO {
+
+    struct CDT2d_ConstraintWalker;
+    
+    class GEOGRAM_API CDTBase2d {
+    public:
+        CDTBase2d();
+
+        virtual ~CDTBase2d();
+
+        virtual void clear();
+        
+        void insert_constraint(index_t i, index_t j);
+
+        void remove_external_triangles();
+        
+        void set_delaunay(bool delaunay) {
+            delaunay_ = delaunay;
+        }
+        
+        index_t nT() const {
+            return T_.size()/3;
+        }
+
+        index_t nv() const {
+            return nv_;
+        }
+
+        index_t ncnstr() const {
+            return ncnstr_;
+        }
+        
+        index_t Tv(index_t t, index_t lv) const {
+            geo_debug_assert(t<nT());
+            geo_debug_assert(lv<3);
+            return T_[3*t+lv];
+        }
+
+        index_t Tv_find(index_t t, index_t v) const {
+            geo_debug_assert(t<nT());
+            geo_debug_assert(v<nv());
+            return find_3(T_.data()+3*t, v); 
+        }
+        
+        index_t Tadj(index_t t, index_t le) const {
+            geo_debug_assert(t<nT());
+            geo_debug_assert(le<3);
+            return Tadj_[3*t+le];
+        }
+        
+        index_t Tadj_find(index_t t1, index_t t2) const {
+            geo_debug_assert(t1<nT());
+            geo_debug_assert(t2<nT());
+            return find_3(Tadj_.data()+3*t1, t2); 
+        }
+
+        index_t vT(index_t v) const {
+            geo_debug_assert(v < nv());
+            return v2T_[v];
+        }
+
+        virtual void save(const std::string& filename) const = 0;
+
+
+        bool Tedge_is_Delaunay(index_t t, index_t le) const;
+
+    protected:
+        index_t insert(index_t v, index_t hint = index_t(-1));
+
+        void create_enclosing_triangle(index_t v1, index_t v2, index_t v3);
+
+        void create_enclosing_quad(
+            index_t v1, index_t v2, index_t v3, index_t v4
+        );
+
+        void Tset_flag(index_t t, index_t flag) {
+            geo_debug_assert(t < nT());
+            geo_debug_assert(flag < 8);
+            Tflags_[t] |= Numeric::uint8(1u << flag);
+        }
+
+        void Treset_flag(index_t t, index_t flag) {
+            geo_debug_assert(t < nT());
+            geo_debug_assert(flag < 8);
+            Tflags_[t] &= Numeric::uint8(~(1u << flag));
+        }
+
+        bool Tflag_is_set(index_t t, index_t flag) {
+            geo_debug_assert(t < nT());
+            geo_debug_assert(flag < 8);
+            return ((Tflags_[t] & (1u << flag)) != 0);
+        }
+
+        enum {
+            DLIST_S_ID=0,
+            DLIST_Q_ID=1,
+            DLIST_N_ID=2,
+            DLIST_NB=3
+        };
+        
+
+        enum {T_MARKED_FLAG = DLIST_NB};
+
+        bool Tis_in_list(index_t t) const {
+            return (
+                (Tflags_[t] &
+                 Numeric::uint8((1 << DLIST_NB)-1)
+                ) != 0
+            );
+        }
+
+        struct DList {
+            DList(CDTBase2d& cdt, index_t list_id) :
+                cdt_(cdt), list_id_(list_id),
+                back_(index_t(-1)), front_(index_t(-1)) {
+                geo_debug_assert(list_id < DLIST_NB);
+            }
+
+            DList(CDTBase2d& cdt) :
+                cdt_(cdt), list_id_(index_t(-1)),
+                back_(index_t(-1)), front_(index_t(-1)) {
+            }
+
+            void initialize(index_t list_id) {
+                geo_debug_assert(!initialized());
+                geo_debug_assert(list_id < DLIST_NB);
+                list_id_ = list_id;
+            }
+
+            bool initialized() const {
+                return (list_id_ != index_t(-1));
+            }
+            
+            ~DList() {
+                if(initialized()) {
+                    clear();
+                }
+            }
+
+            bool empty() const {
+                geo_debug_assert(initialized());
+                geo_debug_assert(
+                    (back_==index_t(-1))==(front_==index_t(-1))
+                );
+                return (back_==index_t(-1));
+            }
+
+            bool contains(index_t t) const {
+                geo_debug_assert(initialized());                
+                return cdt_.Tflag_is_set(t, list_id_);
+            }
+
+            index_t front() const {
+                geo_debug_assert(initialized());
+                return front_;
+            }
+            
+            index_t back() const {
+                geo_debug_assert(initialized());
+                return back_;
+            }
+            
+            index_t next(index_t t) const {
+                geo_debug_assert(initialized());
+                geo_debug_assert(contains(t));
+                return cdt_.Tnext_[t];
+            }
+            
+            index_t prev(index_t t) const {
+                geo_debug_assert(initialized());
+                geo_debug_assert(contains(t));
+                return cdt_.Tprev_[t];
+            }
+
+            void clear() {
+                for(index_t t=front_; t!=index_t(-1); t = cdt_.Tnext_[t]) {
+                    cdt_.Treset_flag(t,list_id_);
+                }
+                back_ = index_t(-1);
+                front_ = index_t(-1);
+            }
+
+            index_t size() const {
+                geo_debug_assert(initialized());
+                index_t result = 0;
+                for(index_t t=front(); t!=index_t(-1); t = next(t)) {
+                    ++result;
+                }
+                return result;
+            }
+        
+            void push_back(index_t t) {
+                geo_debug_assert(initialized());
+                geo_debug_assert(!cdt_.Tis_in_list(t));
+                cdt_.Tset_flag(t,list_id_);
+                if(empty()) {
+                    back_ = t;
+                    front_ = t;
+                    cdt_.Tnext_[t] = index_t(-1);
+                    cdt_.Tprev_[t] = index_t(-1);
+                } else {
+                    cdt_.Tnext_[t] = index_t(-1);
+                    cdt_.Tnext_[back_] = t;
+                    cdt_.Tprev_[t] = back_;
+                    back_ = t;
+                }
+            }
+
+            index_t pop_back() {
+                geo_debug_assert(initialized());
+                geo_debug_assert(!empty());
+                index_t t = back_;
+                back_ = cdt_.Tprev_[back_];
+                if(back_ == index_t(-1)) {
+                    geo_debug_assert(front_ == t);
+                    front_ = index_t(-1);
+                } else {
+                    cdt_.Tnext_[back_] = index_t(-1);
+                }
+                geo_debug_assert(contains(t));
+                cdt_.Treset_flag(t,list_id_);
+                return t;
+            }
+
+            void push_front(index_t t) {
+                geo_debug_assert(initialized());
+                geo_debug_assert(!cdt_.Tis_in_list(t));
+                cdt_.Tset_flag(t,list_id_);
+                if(empty()) {
+                    back_ = t;
+                    front_ = t;
+                    cdt_.Tnext_[t] = index_t(-1);
+                    cdt_.Tprev_[t] = index_t(-1);
+                } else {
+                    cdt_.Tprev_[t] = index_t(-1);
+                    cdt_.Tprev_[front_] = t;
+                    cdt_.Tnext_[t] = front_;
+                    front_ = t;
+                }
+            }
+
+            index_t pop_front() {
+                geo_debug_assert(initialized());
+                geo_debug_assert(!empty());
+                index_t t = front_;
+                front_ = cdt_.Tnext_[front_];
+                if(front_ == index_t(-1)) {
+                    geo_debug_assert(back_ == t);
+                    back_ = index_t(-1);
+                } else {
+                    cdt_.Tprev_[front_] = index_t(-1);
+                }
+                geo_debug_assert(contains(t));
+                cdt_.Treset_flag(t,list_id_);
+                return t;
+            }
+
+            void remove(index_t t) {
+                geo_debug_assert(initialized());
+                if(t == front_) {
+                    pop_front();
+                } else if(t == back_) {
+                    pop_back();
+                } else {
+                    geo_debug_assert(contains(t));
+                    index_t t_prev = cdt_.Tprev_[t];
+                    index_t t_next = cdt_.Tnext_[t];
+                    cdt_.Tprev_[t_next] = t_prev;
+                    cdt_.Tnext_[t_prev] = t_next;
+                    cdt_.Treset_flag(t,list_id_);
+                }
+            }
+
+            void show(std::ostream& out = std::cerr) const {
+                switch(list_id_) {
+                case DLIST_S_ID:
+                    out << "S";
+                    break;
+                case DLIST_Q_ID:
+                    out << "Q";
+                    break;
+                case DLIST_N_ID:
+                    out << "N";
+                    break;
+                case index_t(-1):
+                    out << "<uninitialized list>";
+                    break;
+                default:
+                    out << "<unknown list id:" << list_id_ << ">";
+                    break;
+                }
+                out << "=";
+                for(index_t t=front(); t!=index_t(-1); t = next(t)) {
+                    out << t << ";";
+                }
+                out << std::endl;
+            }
+            
+        private:
+            CDTBase2d& cdt_;
+            index_t list_id_;
+            index_t back_;
+            index_t front_;
+        };
+
+        void insert_vertex_in_edge(index_t v, index_t t, index_t le, DList& S);
+
+        void insert_vertex_in_edge(index_t v, index_t t, index_t le) {
+            DList S(*this);
+            insert_vertex_in_edge(v,t,le,S);
+        }
+
+        void insert_vertex_in_triangle(index_t v, index_t t, DList& S);
+        
+        index_t find_intersected_edges(index_t i, index_t j, DList& Q);
+
+        void walk_constraint_v(CDT2d_ConstraintWalker& W);
+
+        void walk_constraint_t(CDT2d_ConstraintWalker& W, DList& Q);
+        
+        void constrain_edges(index_t i, index_t j, DList& Q, DList& N);
+
+        void Delaunayize_vertex_neighbors(index_t v, DList& S);
+        
+        void Delaunayize_new_edges(DList& N);
+
+        
+        void Tset(
+            index_t t,
+            index_t v1,   index_t v2,   index_t v3,
+            index_t adj1, index_t adj2, index_t adj3,
+            index_t e1cnstr = index_t(-1),
+            index_t e2cnstr = index_t(-1),
+            index_t e3cnstr = index_t(-1)            
+        ) {
+            geo_debug_assert(t < nT());
+            geo_debug_assert(v1 < nv());
+            geo_debug_assert(v2 < nv());
+            geo_debug_assert(v3 < nv());                        
+            geo_debug_assert(adj1 < nT() || adj1 == index_t(-1));
+            geo_debug_assert(adj2 < nT() || adj2 == index_t(-1));
+            geo_debug_assert(adj3 < nT() || adj3 == index_t(-1));
+            geo_debug_assert(v1 != v2);
+            geo_debug_assert(v2 != v3);
+            geo_debug_assert(v3 != v1);            
+            geo_debug_assert(adj1 != adj2 || adj1 == index_t(-1));
+            geo_debug_assert(adj2 != adj3 || adj2 == index_t(-1));
+            geo_debug_assert(adj3 != adj1 || adj3 == index_t(-1));            
+            T_[3*t  ]    = v1;
+            T_[3*t+1]    = v2;
+            T_[3*t+2]    = v3;                        
+            Tadj_[3*t  ] = adj1;
+            Tadj_[3*t+1] = adj2;
+            Tadj_[3*t+2] = adj3;
+            Tecnstr_[3*t]   = e1cnstr;
+            Tecnstr_[3*t+1] = e2cnstr;
+            Tecnstr_[3*t+2] = e3cnstr;
+            v2T_[v1] = t;
+            v2T_[v2] = t;
+            v2T_[v3] = t;
+        }
+
+        void Trot(index_t t, index_t lv) {
+            geo_debug_assert(t < nT());
+            geo_debug_assert(lv < 3);
+            if(lv != 0) {
+                index_t i = 3*t+lv;
+                index_t j = 3*t+((lv+1)%3);
+                index_t k = 3*t+((lv+2)%3);
+                Tset(
+                    t,
+                    T_[i], T_[j], T_[k],
+                    Tadj_[i], Tadj_[j], Tadj_[k],
+                    Tecnstr_[i], Tecnstr_[j], Tecnstr_[k]
+                );
+            }
+        }
+
+        void swap_edge(index_t t1, bool swap_t1_t2=false);
+    
+        void Tadj_set(index_t t, index_t le, index_t adj) {
+            geo_debug_assert(t < nT());
+            geo_debug_assert(adj < nT());
+            geo_debug_assert(le < 3);
+            Tadj_[3*t+le] = adj;
+        }
+
+        void Tadj_back_connect(
+            index_t t1, index_t le1, index_t prev_t2_adj_e2
+        ) {
+            geo_debug_assert(t1 < nT());
+            geo_debug_assert(le1 < 3);
+            index_t t2 = Tadj(t1,le1);
+            if(t2 == index_t(-1)) {
+                return;
+            }
+            index_t le2 = Tadj_find(t2,prev_t2_adj_e2);
+            Tadj_set(t2,le2,t1);
+            Tset_edge_cnstr(t1,le1,Tedge_cnstr(t2,le2));
+        }
+        
+        index_t Tnew() {
+            index_t t = nT();
+            index_t nc = (t+1)*3; // new number of corners
+            T_.resize(nc, index_t(-1));
+            Tadj_.resize(nc, index_t(-1));
+            Tecnstr_.resize(nc, index_t(-1));
+            Tflags_.resize(t+1,0);
+            Tnext_.resize(t+1,index_t(-1));
+            Tprev_.resize(t+1,index_t(-1));
+            return t;
+        }
+
+        index_t Tedge_cnstr(index_t t, index_t le) const {
+            geo_debug_assert(t < nT());
+            geo_debug_assert(le < 3);
+            return Tecnstr_[3*t+le];
+        }
+        
+        void Tset_edge_cnstr(
+            index_t t, index_t le, index_t cnstr_id 
+        ) {
+            geo_debug_assert(t < nT());
+            geo_debug_assert(le < 3);
+            Tecnstr_[3*t+le] = cnstr_id;
+        }
+
+        void Tset_edge_cnstr_with_neighbor(
+            index_t t, index_t le, index_t cnstr_id 
+        ) {
+            geo_debug_assert(t < nT());
+            geo_debug_assert(le < 3);
+            Tset_edge_cnstr(t, le, cnstr_id);
+            index_t t2 = Tadj(t,le);
+            if(t2 != index_t(-1)) {
+                index_t le2 = Tadj_find(t2,t);
+                Tset_edge_cnstr(t2,le2,cnstr_id);
+            }
+        }
+        
+        bool Tedge_is_constrained(index_t t, index_t le) const {
+            return (Tedge_cnstr(t,le) != index_t(-1));
+        }
+
+        void for_each_T_around_v(
+            index_t v, std::function<bool(index_t t, index_t lv)> doit
+        ) {
+            index_t t = vT(v);
+            index_t lv = index_t(-1);
+            do {
+                lv = Tv_find(t,v);
+                if(doit(t,lv)) {
+                    return;
+                }
+                t = Tadj(t, (lv+1)%3);
+            } while(t != vT(v) && t != index_t(-1));
+            
+            // We are done, this was an interior vertex
+            if(t != index_t(-1)) {
+                return;
+            }
+            
+            // It was a vertex on the border, so we need
+            // to traverse the triangle fan in the other
+            // direction until we reach the border again
+            t = vT(v);
+            lv = Tv_find(t,v);
+            t = Tadj(t, (lv+2)%3);
+            while(t != index_t(-1)) {
+                lv = Tv_find(t,v);
+                if(doit(t,lv)) {
+                    return;
+                }
+                t = Tadj(t, (lv+2)%3);
+            }
+        }
+
+        
+        index_t locate(
+            index_t v, index_t hint = index_t(-1), Sign* orient = nullptr
+        ) const;
+        
+        bool is_convex_quad(index_t t) const;
+
+        virtual Sign orient2d(index_t i,index_t j,index_t k) const=0;
+
+        virtual Sign incircle(index_t i,index_t j,index_t k,index_t l) const=0;
+
+        virtual index_t create_intersection(
+            index_t E1, index_t i, index_t j,
+            index_t E2, index_t k, index_t l
+        ) = 0;
+
+        static inline index_t find_3(const index_t* T, index_t v) {
+            // The following expression is 10% faster than using
+            // if() statements. This uses the C++ norm, that 
+            // ensures that the 'true' boolean value converted to 
+            // an int is always 1. With most compilers, this avoids 
+            // generating branching instructions.
+            // Thank to Laurent Alonso for this idea.
+            index_t result = index_t( (T[1] == v) | ((T[2] == v) * 2) );
+            // Sanity check, important if it was T[0], not explicitly
+            // tested (detects input that does not meet the precondition).
+            geo_debug_assert(T[result] == v);
+            return result; 
+        }
+        
+        
+
+        void Tcheck(index_t t) const {
+            if(t == index_t(-1)) {
+                return;
+            }
+            for(index_t e=0; e<3; ++e) {
+                geo_assert(Tv(t,e) != Tv(t,(e+1)%3));
+                if(Tadj(t,e) == index_t(-1)) {
+                    continue;
+                }
+                geo_assert(Tadj(t,e) != Tadj(t,(e+1)%3));
+                index_t t2 = Tadj(t,e);
+                index_t e2 = Tadj_find(t2,t);
+                geo_assert(Tadj(t2,e2) == t);
+            }
+        }
+
+        void debug_Tcheck(index_t t) const {
+#ifdef GEO_DEBUG
+            Tcheck(t);
+#else
+            geo_argused(t);
+#endif            
+        }
+        
+        void check_combinatorics() const {
+            for(index_t t=0; t<nT(); ++t) {
+                Tcheck(t);
+            }
+        }
+
+        void debug_check_combinatorics() const {
+#ifdef GEO_DEBUG
+            check_combinatorics();
+#endif            
+        }
+
+        void check_geometry() const {
+            for(index_t t=0; t<nT(); ++t) {
+                for(index_t le=0; le<3; ++le) {
+                    geo_assert(Tedge_is_Delaunay(t,le));
+                }
+            }
+        }
+
+        void debug_check_geometry() const {
+#ifdef GEO_DEBUG
+            check_geometry();
+#endif            
+        }
+
+
+    public:
+        void check_consistency() const {
+            check_combinatorics();
+            if(delaunay_) {
+                check_geometry();
+            }
+        }
+
+    protected:
+        void debug_check_consistency() const {
+            debug_check_combinatorics();
+            if(delaunay_) {            
+                debug_check_geometry();
+            }
+        }
+        
+        bool segment_segment_intersect(
+            index_t u1, index_t u2, index_t v1, index_t v2
+        ) const {
+            if(orient2d(u1,u2,v1)*orient2d(u1,u2,v2) > 0) {
+                return false;
+            }
+            return (orient2d(v1,v2,u1)*orient2d(v1,v2,u2) < 0);
+        }
+        
+        bool segment_edge_intersect(
+            index_t v1, index_t v2, index_t t, index_t le
+        ) const {
+            index_t u1 = Tv(t,(le + 1)%3);
+            index_t u2 = Tv(t,(le + 2)%3);
+            return segment_segment_intersect(u1,u2,v1,v2);
+        }
+
+        void check_edge_intersections(
+            index_t v1, index_t v2, const DList& Q
+        );
+
+        typedef std::pair<index_t, index_t> Edge;
+        
+        index_t eT(Edge E) {
+            index_t v1 = E.first;
+            index_t v2 = E.second;
+            index_t result = index_t(-1);
+            for_each_T_around_v(
+                v1, [&](index_t t, index_t lv)->bool {
+                    if(Tv(t, (lv+1)%3) == v2) {
+                        if(Tv(t, (lv+2)%3) != v1) {
+                            Trot(t, (lv+2)%3);
+                        }
+                        result = t;
+                        return true;
+                    } else if(Tv(t, (lv+1)%3) == v1) {
+                        if(Tv(t, (lv+2)%3) != v2) {
+                            Trot(t, (lv+2)%3);
+                        }
+                        result = t;                    
+                        return true;
+                    }
+                    return false;
+                }
+            );
+            geo_debug_assert(result != index_t(-1));
+            geo_debug_assert(
+                (Tv(result,1) == v1 && Tv(result,2) == v2) ||
+                (Tv(result,1) == v2 && Tv(result,2) == v1) 
+            );
+            return result;
+        }
+
+        index_t locate_naive(
+            index_t v, index_t hint = index_t(-1), Sign* orient = nullptr
+        ) const;
+        
+        void constrain_edges_naive(
+            index_t i, index_t j, DList& Q, vector<Edge>& N
+        );
+
+        void Delaunayize_new_edges_naive(vector<Edge>& N);
+        
+    protected:
+        index_t nv_;
+        index_t ncnstr_;
+        vector<index_t> T_;       
+        vector<index_t> Tadj_;    
+        vector<index_t> v2T_;     
+        vector<uint8_t> Tflags_;  
+        vector<index_t> Tecnstr_; 
+        vector<index_t> Tnext_;   
+        vector<index_t> Tprev_;   
+        bool delaunay_;           
+        Sign orient_012_;         
+    };
+
+    
+    
+    class GEOGRAM_API CDT2d: public CDTBase2d {
+    public:
+
+        CDT2d();
+        
+        ~CDT2d() override;
+        
+        void clear() override;
+
+        void create_enclosing_triangle(
+            const vec2& p1, const vec2& p2, const vec2& p3
+        );
+
+        void create_enclosing_quad(
+            const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4
+        );
+
+
+        void create_enclosing_rectangle(
+            double x1, double y1, double x2, double y2
+        ) {
+            create_enclosing_quad(
+                vec2(x1,y1),
+                vec2(x2,y1),
+                vec2(x2,y2),
+                vec2(x1,y2)
+            );
+        }
+        
+        index_t insert(const vec2& p, index_t hint = index_t(-1)) {
+            debug_check_consistency();            
+            point_.push_back(p);
+            index_t v = CDTBase2d::insert(point_.size()-1, hint);
+            // If inserted point already existed in
+            // triangulation, then nv() did not increase
+            if(point_.size() > nv()) {
+                point_.pop_back();
+            }
+            debug_check_consistency();                        
+            return v;
+        }
+
+        void insert(index_t nb_points, const double* points);
+        
+        void save(const std::string& filename) const override;
+
+        const vec2 point(index_t v) const {
+            geo_debug_assert(v < nv());
+            return point_[v];
+        }
+
+    protected:
+        Sign orient2d(index_t i, index_t j, index_t k) const override;
+
+        Sign incircle(index_t i,index_t j,index_t k,index_t l) const override;
+
+        index_t create_intersection(
+            index_t E1, index_t i, index_t j,
+            index_t E2, index_t k, index_t l
+        ) override;
+        
+    protected:
+        vector<vec2> point_;
+    };
+
+        
 }
 
 #endif
