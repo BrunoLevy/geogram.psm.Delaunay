@@ -436,12 +436,12 @@ namespace GEO {
         }
 
         T& operator[] (unsigned int i) {
-            geo_debug_assert(i >= 0 && index_t(i) < size());
+            geo_debug_assert(index_t(i) < size());
             return baseclass::operator[] (index_t(i));
         }
 
         const T& operator[] (unsigned int i) const {
-            geo_debug_assert(i >= 0 && index_t(i) < size());
+            geo_debug_assert(index_t(i) < size());
             return baseclass::operator[] (index_t(i));
         }
 #endif	
@@ -7624,6 +7624,25 @@ namespace GEO {
                 }
             }
             return result;
+
+            /*
+            const char* statm_path = "/proc/self/statm";
+            unsigned long size,resident,share,text,lib,data,dt;
+            FILE *F = fopen(statm_path,"r");
+            if(F == nullptr) {
+                perror(statm_path);
+                abort();
+            }
+            if(
+                fscanf(F,"%ld %ld %ld %ld %ld %ld %ld",
+                       &size,&resident,&share,&text,&lib,&data,&dt
+                ) != 7
+            ) {
+                perror(statm_path);
+                abort();
+            }
+            fclose(f);
+            */
 #endif
         }
 
@@ -9849,6 +9868,8 @@ namespace {
         two_one_sum(_j, _0, b1, x3, x2, x1);
     }
 
+#ifndef FP_FAST_FMA
+    
     inline void two_product_presplit(
         double a, double b, double bhi, double blo, double& x, double& y
     ) {
@@ -9874,6 +9895,8 @@ namespace {
         y = (alo * blo) - err3;
     }
 
+#endif
+    
     inline void two_square(
         double a1, double a0,
         double* x
@@ -28809,8 +28832,9 @@ namespace VBW {
 	//    v = triangle_vertex(t, (e+2)%3);
 	// } while(v != first_v_on_border]);
 
-	index_t nb = 0; // for sanity check, number of vertices on border
-	                // of conflict zone.
+	geo_debug(index_t nb = 0); // for sanity check, number of vertices on border
+                                   // of conflict zone.
+        
 	VBW::index_t first_v_on_border = END_OF_LIST;
 	for(
 	    VBW::ushort t = first_triangle();
@@ -28823,24 +28847,24 @@ namespace VBW {
 		first_v_on_border = triangle_vertex(t,1);
 		v2t_[first_v_on_border] = t;
 		v2e_[first_v_on_border] = 0;
-		++nb;
+		geo_debug(++nb);
 	    }
 	    if(triangle_is_marked_as_conflict(triangle_adjacent(t,1))) {
 		first_v_on_border = triangle_vertex(t,2);
 		v2t_[first_v_on_border] = t;
 		v2e_[first_v_on_border] = 1;
-		++nb;		
+		geo_debug(++nb);
 	    }
 	    if(triangle_is_marked_as_conflict(triangle_adjacent(t,2))) {
 		first_v_on_border = triangle_vertex(t,0);
 		v2t_[first_v_on_border] = t;
 		v2e_[first_v_on_border] = 2;
-		++nb;		
+		geo_debug(++nb);
 	    }
 	}
 
-	index_t nb2 = 0; // for sanity check, number of vertices on border
-	                 // of conflict zone (should match nb).
+	geo_debug(index_t nb2 = 0); // for sanity check, number of vertices on border
+	                            // of conflict zone (should match nb).
 
 	// Traverse the list of edges on the border of the conflict zone
 	// (see previous comment block for explanations). For each edge
@@ -28856,7 +28880,7 @@ namespace VBW {
 	    VBW::ushort prev_new_t  = VBW::ushort(-1);
 	    VBW::ushort first_new_t = VBW::ushort(-1);
 	    do {
-		++nb2;
+		geo_debug(++nb2);
 		index_t t = v2t_[v];
 		index_t e = v2e_[v];
 		index_t v1 = triangle_vertex(t, (e+1)%3);
@@ -33638,15 +33662,19 @@ namespace GEO {
         }
 
         // Efficient locate, "walking the triangulation"
-        index_t nb_traversed_t = 0;
         index_t t_pred = nT()+1; // Needs to be different from index_t(-1)
         index_t t = (hint == index_t(-1)) ?
                      index_t(Numeric::random_int32()) % nT() :
                      hint ;
+        #ifdef GEO_DEBUG
+        index_t nb_traversed_t = 0;
+        #endif
         
     still_walking:
         {
+            #ifdef GEO_DEBUG
             ++nb_traversed_t;
+            #endif
 
             // Infinite loop are not supposed to happen, but
             // let us detect them, just in case...

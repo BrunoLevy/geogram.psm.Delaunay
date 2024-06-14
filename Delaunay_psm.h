@@ -261,6 +261,7 @@ namespace GEO {
 #define GEO_OS_EMSCRIPTEN
 #define GEO_ARCH_64
 #define GEO_COMPILER_EMSCRIPTEN
+#define GEO_COMPILER_CLANG
 
 // =============================== Unsupported =============================
 #else
@@ -400,9 +401,11 @@ namespace GEO {
 #ifdef GEO_DEBUG
 #define geo_debug_assert(x) geo_assert(x)
 #define geo_debug_range_assert(x, min_val, max_val) geo_range_assert(x, min_val, max_val)
+#define geo_debug(x) x
 #else
 #define geo_debug_assert(x)
 #define geo_debug_range_assert(x, min_val, max_val)
+#define geo_debug(x) 
 #endif
 
 #ifdef GEO_PARANOID
@@ -1008,12 +1011,12 @@ namespace GEO {
         }
 
         T& operator[] (unsigned int i) {
-            geo_debug_assert(i >= 0 && index_t(i) < size());
+            geo_debug_assert(index_t(i) < size());
             return baseclass::operator[] (index_t(i));
         }
 
         const T& operator[] (unsigned int i) const {
-            geo_debug_assert(i >= 0 && index_t(i) < size());
+            geo_debug_assert(index_t(i) < size());
             return baseclass::operator[] (index_t(i));
         }
 #endif	
@@ -1658,8 +1661,6 @@ extern int GEOGRAM_API geogram_fprintf(FILE* out, const char* format, ...);
 
 #endif
 
-
-/******* extracted from ../basic/atomics.h *******/
 
 /******* extracted from ../basic/thread_sync.h *******/
 
@@ -6747,6 +6748,8 @@ namespace GEO {
 
         intervalBase(const intervalBase& rhs) = default;
 
+        intervalBase& operator=(const intervalBase& rhs) = default;
+        
     protected:
 #ifdef INTERVAL_CHECK
         void control_set(const expansion_nt& x) {
