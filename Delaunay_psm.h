@@ -17,7 +17,7 @@
  *  * Neither the name of the ALICE Project-Team nor the names of its
  *  contributors may be used to endorse or promote products derived from this
  *  software without specific prior written permission.
- * 
+ *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -69,24 +69,24 @@
  */
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
-#pragma clang diagnostic ignored "-Wdocumentation-unknown-command" 
+#pragma clang diagnostic ignored "-Wdocumentation-unknown-command"
 #endif
 
 
 #if defined(GEO_DYNAMIC_LIBS)
-   #if defined(_MSC_VER)
-      #define GEO_IMPORT __declspec(dllimport) 
-      #define GEO_EXPORT __declspec(dllexport) 
-   #elif defined(__GNUC__)
-      #define GEO_IMPORT  
-      #define GEO_EXPORT __attribute__ ((visibility("default")))
-   #else
-      #define GEO_IMPORT
-      #define GEO_EXPORT
-   #endif
+#if defined(_MSC_VER)
+#define GEO_IMPORT __declspec(dllimport)
+#define GEO_EXPORT __declspec(dllexport)
+#elif defined(__GNUC__)
+#define GEO_IMPORT
+#define GEO_EXPORT __attribute__ ((visibility("default")))
 #else
-   #define GEO_IMPORT
-   #define GEO_EXPORT
+#define GEO_IMPORT
+#define GEO_EXPORT
+#endif
+#else
+#define GEO_IMPORT
+#define GEO_EXPORT
 #endif
 
 #ifdef geogram_EXPORTS
@@ -102,9 +102,9 @@ typedef int GeoMesh;
 
 typedef unsigned char geo_coord_index_t;
 
-/* 
- * If GARGANTUA is defined, then geogram is compiled 
- * with 64 bit indices. 
+/*
+ * If GARGANTUA is defined, then geogram is compiled
+ * with 64 bit indices.
  */
 #ifdef GARGANTUA
 
@@ -133,7 +133,6 @@ enum {
 
 #endif
 
-
 /******* extracted from ../basic/common.h *******/
 
 #ifndef GEOGRAM_BASIC_COMMON
@@ -149,11 +148,27 @@ enum {
 namespace GEO {
 
     enum {
-	GEOGRAM_NO_HANDLER = 0,
-	GEOGRAM_INSTALL_HANDLERS = 1
+        /// Do not install error handlers
+        GEOGRAM_INSTALL_NONE = 0,
+        /// Install Geogram's signal handlers
+        GEOGRAM_INSTALL_HANDLERS = 1,
+        /// Sets the locale to POSIX
+        GEOGRAM_INSTALL_LOCALE = 2,
+        /// Reset errno to 0
+        GEOGRAM_INSTALL_ERRNO = 4,
+        /// Enable or disable FPE during initialization
+        GEOGRAM_INSTALL_FPE = 8,
+        /// Enable global citation database
+        GEOGRAM_INSTALL_BIBLIO = 16,
+        /// Install everything
+        GEOGRAM_INSTALL_ALL = GEOGRAM_INSTALL_HANDLERS
+        | GEOGRAM_INSTALL_LOCALE
+        | GEOGRAM_INSTALL_ERRNO
+        | GEOGRAM_INSTALL_FPE
+        | GEOGRAM_INSTALL_BIBLIO
     };
-    
-    void GEOGRAM_API initialize(int flags = GEOGRAM_INSTALL_HANDLERS);
+
+    void GEOGRAM_API initialize(int flags = GEOGRAM_INSTALL_NONE);
 
     void GEOGRAM_API terminate();
 }
@@ -268,9 +283,9 @@ namespace GEO {
 #error "Unsupported operating system"
 #endif
 
-#if defined(GEO_COMPILER_GCC)   || \
-    defined(GEO_COMPILER_CLANG) || \
-    defined(GEO_COMPILER_MINGW) || \
+#if defined(GEO_COMPILER_GCC)   ||              \
+    defined(GEO_COMPILER_CLANG) ||              \
+    defined(GEO_COMPILER_MINGW) ||              \
     defined(GEO_COMPILER_EMSCRIPTEN)
 #define GEO_COMPILER_GCC_FAMILY
 #endif
@@ -291,19 +306,19 @@ namespace GEO {
 
 #if defined(GOMGEN)
 #define GEO_NORETURN
-#elif defined(GEO_COMPILER_GCC_FAMILY) || \
-      defined(GEO_COMPILER_INTEL) 
+#elif defined(GEO_COMPILER_GCC_FAMILY) ||       \
+    defined(GEO_COMPILER_INTEL)
 #define GEO_NORETURN __attribute__((noreturn))
 #else
 #define GEO_NORETURN
 #endif
 
 #if defined(GOMGEN)
-#define GEO_NORETURN_DECL 
+#define GEO_NORETURN_DECL
 #elif defined(GEO_COMPILER_MSVC)
 #define GEO_NORETURN_DECL __declspec(noreturn)
 #else
-#define GEO_NORETURN_DECL 
+#define GEO_NORETURN_DECL
 #endif
 
 #if defined(GEO_COMPILER_CLANG) || defined(GEO_COMPILER_EMSCRIPTEN)
@@ -312,8 +327,8 @@ namespace GEO {
 #endif
 #endif
 
-// For Graphite GOM generator (swig is confused by throw() specifier) 
-#ifdef GOMGEN 
+// For Graphite GOM generator (swig is confused by throw() specifier)
+#ifdef GOMGEN
 #define GEO_NOEXCEPT
 #endif
 
@@ -332,7 +347,6 @@ namespace GEO {
 
 #endif
 
-
 /******* extracted from ../basic/assert.h *******/
 
 #ifndef GEOGRAM_BASIC_ASSERT
@@ -348,8 +362,8 @@ namespace GEO {
         ASSERT_THROW,
         
         ASSERT_ABORT,
-	
-	ASSERT_BREAKPOINT
+        
+        ASSERT_BREAKPOINT
     };
 
     void GEOGRAM_API set_assert_mode(AssertMode mode);
@@ -359,7 +373,7 @@ namespace GEO {
     GEO_NORETURN_DECL void GEOGRAM_API geo_abort() GEO_NORETURN;
 
     GEO_NORETURN_DECL void GEOGRAM_API geo_breakpoint() GEO_NORETURN;
-    
+
     GEO_NORETURN_DECL void GEOGRAM_API geo_assertion_failed(
         const std::string& condition_string,
         const std::string& file, int line
@@ -380,23 +394,23 @@ namespace GEO {
 // use geo_debug_assert() and geo_debug_range_assert()   expensive asserts
 // use geo_parano_assert() and geo_parano_range_assert() very exensive asserts
 
-#define geo_assert(x) {                                      \
-        if(!(x)) {                                               \
-            GEO::geo_assertion_failed(#x, __FILE__, __LINE__);   \
-        }                                                        \
-}
+#define geo_assert(x) {                                         \
+        if(!(x)) {                                              \
+            GEO::geo_assertion_failed(#x, __FILE__, __LINE__);  \
+        }                                                       \
+    }
 
-#define geo_range_assert(x, min_val, max_val) {              \
-        if(((x) < (min_val)) || ((x) > (max_val))) {             \
-            GEO::geo_range_assertion_failed(x, min_val, max_val, \
-                __FILE__, __LINE__                               \
-            );                                                   \
-        }                                                        \
-}
+#define geo_range_assert(x, min_val, max_val) {                         \
+        if(((x) < (min_val)) || ((x) > (max_val))) {                    \
+            GEO::geo_range_assertion_failed(x, min_val, max_val,        \
+                                            __FILE__, __LINE__          \
+                                           );                           \
+        }                                                               \
+    }
 
-#define geo_assert_not_reached {                             \
-        GEO::geo_should_not_have_reached(__FILE__, __LINE__);    \
-}
+#define geo_assert_not_reached {                                \
+        GEO::geo_should_not_have_reached(__FILE__, __LINE__);   \
+    }
 
 #ifdef GEO_DEBUG
 #define geo_debug_assert(x) geo_assert(x)
@@ -405,7 +419,7 @@ namespace GEO {
 #else
 #define geo_debug_assert(x)
 #define geo_debug_range_assert(x, min_val, max_val)
-#define geo_debug(x) 
+#define geo_debug(x)
 #endif
 
 #ifdef GEO_PARANOID
@@ -417,7 +431,6 @@ namespace GEO {
 #endif
 
 #endif
-
 
 /******* extracted from ../basic/argused.h *******/
 
@@ -434,7 +447,6 @@ namespace GEO {
 }
 
 #endif
-
 
 /******* extracted from ../basic/numeric.h *******/
 
@@ -475,7 +487,7 @@ namespace GEO {
     inline Sign geo_cmp(const T& a, const T& b) {
         return Sign((a > b) * POSITIVE + (a < b) * NEGATIVE);
     }
-    
+
     namespace Numeric {
 
         
@@ -558,7 +570,7 @@ namespace GEO {
         };
 
         template <class T>
-        struct Limits : 
+        struct Limits :
             LimitsHelper<T, std::numeric_limits<T>::is_specialized> {
         };
 
@@ -615,18 +627,17 @@ namespace GEO {
     typedef geo_coord_index_t coord_index_t;
 
     inline double round(double x) {
-	return ((x - floor(x)) > 0.5 ? ceil(x) : floor(x));
+        return ((x - floor(x)) > 0.5 ? ceil(x) : floor(x));
     }
 
     
-    
+
     static constexpr index_t NO_INDEX = index_t(-1);
-    
+
     
 }
 
 #endif
-
 
 /******* extracted from ../basic/memory.h *******/
 
@@ -685,9 +696,9 @@ namespace GEO {
         
         typedef byte* pointer;
 
-	
-	typedef void (*function_pointer)();
-	
+        
+        typedef void (*function_pointer)();
+
         inline void clear(void* addr, size_t size) {
             ::memset(addr, 0, size);
         }
@@ -696,34 +707,34 @@ namespace GEO {
             ::memcpy(to, from, size);
         }
 
-	inline pointer function_pointer_to_generic_pointer(
+        inline pointer function_pointer_to_generic_pointer(
             function_pointer fptr
         ) {
-	    // I know this is ugly, but I did not find a simpler warning-free
-	    // way that is portable between all compilers.
-	    pointer result = nullptr;
-	    ::memcpy(&result, &fptr, sizeof(pointer));
-	    return result;
-	}
+            // I know this is ugly, but I did not find a simpler warning-free
+            // way that is portable between all compilers.
+            pointer result = nullptr;
+            ::memcpy(&result, &fptr, sizeof(pointer));
+            return result;
+        }
 
-	inline function_pointer generic_pointer_to_function_pointer(
+        inline function_pointer generic_pointer_to_function_pointer(
             pointer ptr
         ) {
-	    // I know this is ugly, but I did not find a simpler warning-free
-	    // way that is portable between all compilers.
-	    function_pointer result = nullptr;
-	    ::memcpy(&result, &ptr, sizeof(pointer));
-	    return result;
-	}
+            // I know this is ugly, but I did not find a simpler warning-free
+            // way that is portable between all compilers.
+            function_pointer result = nullptr;
+            ::memcpy(&result, &ptr, sizeof(pointer));
+            return result;
+        }
 
-	inline function_pointer generic_pointer_to_function_pointer(void* ptr) {
-	    // I know this is ugly, but I did not find a simpler warning-free
-	    // way that is portable between all compilers.
-	    function_pointer result = nullptr;
-	    ::memcpy(&result, &ptr, sizeof(pointer));
-	    return result;
-	}
-	
+        inline function_pointer generic_pointer_to_function_pointer(void* ptr) {
+            // I know this is ugly, but I did not find a simpler warning-free
+            // way that is portable between all compilers.
+            function_pointer result = nullptr;
+            ::memcpy(&result, &ptr, sizeof(pointer));
+            return result;
+        }
+
 #define GEO_MEMORY_ALIGNMENT 64
 
         template <int DIM>
@@ -770,7 +781,7 @@ namespace GEO {
 #elif defined(GEO_COMPILER_GCC) || defined(GEO_COMPILER_CLANG)
             void* result;
             return posix_memalign(&result, alignment, size) == 0
-                   ? result : nullptr;
+                ? result : nullptr;
 #elif defined(GEO_COMPILER_MSVC)
             return _aligned_malloc(size, alignment);
 #else
@@ -785,7 +796,7 @@ namespace GEO {
             free(p);
 #elif defined(GEO_COMPILER_INTEL)
             _mm_free(p);
-#elif defined(GEO_COMPILER_GCC_FAMILY) 
+#elif defined(GEO_COMPILER_GCC_FAMILY)
             free(p);
 #elif defined(GEO_COMPILER_MSVC)
             _aligned_free(p);
@@ -803,34 +814,34 @@ namespace GEO {
 #elif defined(GEO_COMPILER_MSVC)
 #define geo_decl_aligned(var) __declspec(align(GEO_MEMORY_ALIGNMENT)) var
 #elif defined(GEO_COMPILER_EMSCRIPTEN)
-#define geo_decl_aligned(var) var        
+#define geo_decl_aligned(var) var
 #endif
 
 #if   defined(GEO_OS_ANDROID)
 #define geo_assume_aligned(var, alignment)
 #elif defined(GEO_COMPILER_INTEL)
-#define geo_assume_aligned(var, alignment) \
-    __assume_aligned(var, alignment)
+#define geo_assume_aligned(var, alignment)      \
+        __assume_aligned(var, alignment)
 #elif defined(GEO_COMPILER_CLANG)
 #define geo_assume_aligned(var, alignment)
         // GCC __builtin_assume_aligned is not yet supported by clang-3.3
 #elif defined(GEO_COMPILER_GCC)
 #if __GNUC__ >= 4 && __GNUC_MINOR__ >= 7
-#define geo_assume_aligned(var, alignment) \
+#define geo_assume_aligned(var, alignment)                              \
         *(void**) (&var) = __builtin_assume_aligned(var, alignment)
         // the GCC way of specifying that a pointer is aligned returns
         // the aligned pointer (I can't figure out why). It needs to be
         // affected otherwise it is not taken into account (verified by
         // looking at the output of gcc -S)
 #else
-#define geo_assume_aligned(var, alignment)        
-#endif        
-#elif defined(GEO_COMPILER_MSVC) 
+#define geo_assume_aligned(var, alignment)
+#endif
+#elif defined(GEO_COMPILER_MSVC)
 #define geo_assume_aligned(var, alignment)
         // TODO: I do not know how to do that with MSVC
-#elif defined(GEO_COMPILER_EMSCRIPTEN)        
+#elif defined(GEO_COMPILER_EMSCRIPTEN)
 #define geo_assume_aligned(var, alignment)
-#elif defined(GEO_COMPILER_MINGW)        
+#elif defined(GEO_COMPILER_MINGW)
 #define geo_assume_aligned(var, alignment)
 #endif
 
@@ -841,7 +852,7 @@ namespace GEO {
 #elif defined(GEO_COMPILER_MSVC)
 #define geo_restrict __restrict
 #elif defined(GEO_COMPILER_EMSCRIPTEN)
-#define geo_restrict 
+#define geo_restrict
 #endif
 
         inline bool is_aligned(
@@ -858,8 +869,8 @@ namespace GEO {
             return reinterpret_cast<char*>(p) + offset;
         }
 
-#define geo_aligned_alloca(size) \
-    GEO::Memory::align(alloca(size + GEO_MEMORY_ALIGNMENT - 1))
+#define geo_aligned_alloca(size)                                        \
+        GEO::Memory::align(alloca(size + GEO_MEMORY_ALIGNMENT - 1))
 
         template <class T, int ALIGN = GEO_MEMORY_ALIGNMENT>
         class aligned_allocator {
@@ -885,6 +896,9 @@ namespace GEO {
             
             typedef ::std::ptrdiff_t difference_type;
 
+	    
+	    static constexpr int ALIGNMENT = ALIGN;
+
             template <class U>
             struct rebind {
                 
@@ -902,11 +916,31 @@ namespace GEO {
             pointer allocate(
                 size_type nb_elt, const void* hint = nullptr
             ) {
+		nb_elt = std::max(nb_elt,size_type(1));
                 geo_argused(hint);
-                pointer result = static_cast<pointer>(
-                    aligned_malloc(sizeof(T) * nb_elt, ALIGN)
-                );
-                return result;
+		while(true) {
+		    pointer result = static_cast<pointer>(
+			aligned_malloc(sizeof(T) * nb_elt, ALIGNMENT)
+		    );
+		    if(result != nullptr) {
+			return result;
+		    }
+		    // under Linux, a process requesting more mem than available
+		    // is killed (and there is nothing we can capture). Under
+		    // other OSes, the standard mechanism to let the runtime
+		    // know is as follows:
+		    // see: https://stackoverflow.com/questions/7194127/
+		    // how-should-i-write-iso-c-standard-conformant-custom-
+		    // new-and-delete-operators
+		    // (if there is a handler, call it repeatedly until
+		    // allocation succeeds, else throw a bad_alloc exception)
+		    std::new_handler handler = std::get_new_handler();
+		    if(handler != nullptr) {
+			(*handler)();
+		    } else {
+			throw std::bad_alloc();
+		    }
+		}
             }
 
             void deallocate(pointer p, size_type nb_elt) {
@@ -916,7 +950,8 @@ namespace GEO {
 
             size_type max_size() const {
                 ::std::allocator<char> a;
-                return std::allocator_traits<decltype(a)>::max_size(a) / sizeof(T);
+                return std::allocator_traits<decltype(a)>::max_size(a) /
+		    sizeof(T);
             }
 
             void construct(pointer p, const_reference val) {
@@ -954,7 +989,11 @@ namespace GEO {
 
     template <class T>
     class vector : public ::std::vector<T, Memory::aligned_allocator<T> > {
+	typedef Memory::aligned_allocator<T> allocator;
+
         typedef ::std::vector<T, Memory::aligned_allocator<T> > baseclass;
+
+
 
     public:
         vector() :
@@ -1019,16 +1058,33 @@ namespace GEO {
             geo_debug_assert(index_t(i) < size());
             return baseclass::operator[] (index_t(i));
         }
-#endif	
-	
+#endif
+
         T* data() {
-            return size() == 0 ? nullptr : &(*this)[0];
+            T* result = baseclass::data();
+	    // Tell the compiler that the pointer is aligned, to enable AVX
+	    // vectorization, can be useful when using vector<double>
+	    // with blas-like operations. I hope the hint will propagate to
+	    // the caller (not sure...)
+	    geo_assume_aligned(result, allocator::ALIGNMENT);
+	    return result;
         }
 
         const T* data() const {
-            return size() == 0 ? nullptr : &(*this)[0];
+            const T* result = baseclass::data();
+	    // Tell the compiler that the pointer is aligned, to enable AVX
+	    // vectorization, can be useful when using vector<double>
+	    // with blas-like operations. I hope the hint will propagate to
+	    // the caller (not sure...)
+	    geo_assume_aligned(result, allocator::ALIGNMENT);
+	    return result;
         }
 
+
+	void clear_and_deallocate() {
+	    vector<T> other;
+	    this->swap(other);
+	}
     };
 
     template <>
@@ -1067,7 +1123,6 @@ namespace GEO {
 
 #endif
 
-
 /******* extracted from ../basic/counted.h *******/
 
 #ifndef GEOGRAM_BASIC_COUNTED
@@ -1079,57 +1134,56 @@ namespace GEO {
 
     class GEOGRAM_API Counted {
     public:
-        void ref() const {
-            ++nb_refs_;
-        }
+    void ref() const {
+        ++nb_refs_;
+    }
 
-        void unref() const {
-            --nb_refs_;
-            geo_debug_assert(nb_refs_ >= 0);
-            if(nb_refs_ == 0) {
-                delete this;
-            }
+    void unref() const {
+        --nb_refs_;
+        geo_debug_assert(nb_refs_ >= 0);
+        if(nb_refs_ == 0) {
+            delete this;
         }
+    }
 
-        bool is_shared() const {
-            return nb_refs_ > 1;
-        }
+    bool is_shared() const {
+        return nb_refs_ > 1;
+    }
 
-        int nb_refs() const {
-	    return nb_refs_;
-	}
-    
-        static void ref(const Counted* counted) {
-            if(counted != nullptr) {
-                counted->ref();
-            }
-        }
+    int nb_refs() const {
+        return nb_refs_;
+    }
 
-        static void unref(const Counted* counted) {
-            if(counted != nullptr) {
-                counted->unref();
-            }
+    static void ref(const Counted* counted) {
+        if(counted != nullptr) {
+            counted->ref();
         }
+    }
+
+    static void unref(const Counted* counted) {
+        if(counted != nullptr) {
+            counted->unref();
+        }
+    }
 
     protected:
-        Counted() :
-            nb_refs_(0) {
-        }
+    Counted() :
+    nb_refs_(0) {
+    }
 
-        virtual ~Counted();
+    virtual ~Counted();
 
     private:
-        
-        Counted(const Counted&);
-        
-        Counted& operator= (const Counted&);
+    
+    Counted(const Counted&);
+    
+    Counted& operator= (const Counted&);
 
-        mutable int nb_refs_;
+    mutable int nb_refs_;
     };
 }
 
 #endif
-
 
 /******* extracted from ../basic/smart_pointer.h *******/
 
@@ -1246,7 +1300,6 @@ namespace GEO {
 
 #endif
 
-
 /******* extracted from ../basic/environment.h *******/
 
 #ifndef GEOGRAM_BASIC_ENVIRONMENT
@@ -1260,45 +1313,45 @@ namespace GEO {
 namespace GEO {
 
     class Environment;
-    
+
     
 
     class GEOGRAM_API VariableObserver {
     public:
-        VariableObserver(const std::string& var_name);
+    VariableObserver(const std::string& var_name);
 
-        virtual void value_changed(const std::string& new_value) = 0;
+    virtual void value_changed(const std::string& new_value) = 0;
 
-        virtual ~VariableObserver();
+    virtual ~VariableObserver();
 
-        const std::string& observed_variable() const {
-            return observed_variable_;
-        }
+    const std::string& observed_variable() const {
+        return observed_variable_;
+    }
 
     private:
-        std::string observed_variable_;
-        Environment* environment_;
+    std::string observed_variable_;
+    Environment* environment_;
     };
 
     
 
     class GEOGRAM_API VariableObserverList {
     public:
-        VariableObserverList() :
-            block_notify_(false) {
-        }
+    VariableObserverList() :
+    block_notify_(false) {
+    }
 
-        void notify_observers(const std::string& value);
+    void notify_observers(const std::string& value);
 
-        void add_observer(VariableObserver* observer);
+    void add_observer(VariableObserver* observer);
 
-        void remove_observer(VariableObserver* observer);
+    void remove_observer(VariableObserver* observer);
 
     private:
-        
-        typedef std::vector<VariableObserver*> Observers;
-        Observers observers_;
-        bool block_notify_;
+    
+    typedef std::vector<VariableObserver*> Observers;
+    Observers observers_;
+    bool block_notify_;
     };
 
     
@@ -1324,7 +1377,7 @@ namespace GEO {
         );
 
         virtual Environment* find_environment(const std::string& name);
-        
+
         virtual bool add_observer(
             const std::string& name, VariableObserver* observer
         );
@@ -1338,7 +1391,7 @@ namespace GEO {
         );
 
     protected:
-         ~Environment() override;
+        ~Environment() override;
 
         virtual bool get_local_value(
             const std::string& name, std::string& value
@@ -1391,7 +1444,6 @@ namespace GEO {
 
 #endif
 
-
 /******* extracted from ../basic/logger.h *******/
 
 #ifndef GEOGRAM_BASIC_LOGGER
@@ -1415,7 +1467,7 @@ namespace GEO {
     class NO_GEOGRAM_API LoggerStreamBuf : public std::stringbuf {
     public:
         LoggerStreamBuf(LoggerStream* loggerStream) :
-  	loggerStream_(loggerStream) {
+            loggerStream_(loggerStream) {
         }
 
     private:
@@ -1442,7 +1494,7 @@ namespace GEO {
     };
 
     
-    
+
     class GEOGRAM_API LoggerClient : public Counted {
     public:
         virtual void div(const std::string& title) = 0;
@@ -1521,8 +1573,8 @@ namespace GEO {
 
 
         static bool is_initialized();
-        
-       
+
+
         static std::ostream& div(const std::string& title);
 
         static std::ostream& out(const std::string& feature);
@@ -1538,7 +1590,7 @@ namespace GEO {
         void unregister_client(LoggerClient* client);
 
         void unregister_all_clients();
-        
+
         bool is_client(LoggerClient* client) const;
 
         void set_quiet(bool flag);
@@ -1553,7 +1605,7 @@ namespace GEO {
         bool is_minimal() const {
             return minimal_;
         }
-        
+
         void set_pretty(bool flag);
 
         bool is_pretty() const {
@@ -1581,7 +1633,7 @@ namespace GEO {
         std::ostream& status_stream();
 
         std::ostream& err_console();
-        
+
         void notify(LoggerStream* sender, const std::string& message);
 
         void notify_out(const std::string& message);
@@ -1600,6 +1652,16 @@ namespace GEO {
             const std::string& name, std::string& value
         ) const override;
 
+
+	void indent() {
+	    ++indent_;
+	}
+
+	void unindent() {
+	    geo_debug_assert(indent_ != 0);
+	    --indent_;
+	}
+
     private:
         static SmartPointer<Logger> instance_;
 
@@ -1609,7 +1671,7 @@ namespace GEO {
         LoggerStream status_;
 
         std::ostream* err_console_;
-        
+
         // features we want or don't want to log (only applies to 'out').
 
         
@@ -1629,10 +1691,13 @@ namespace GEO {
         bool quiet_;
         bool pretty_;
         bool minimal_;
-	bool notifying_error_;
-        
+        bool notifying_error_;
+
+	index_t indent_;
+
         friend class LoggerStream;
         friend class LoggerStreamBuf;
+	friend class Stopwatch;
     };
 
     
@@ -1660,7 +1725,6 @@ extern int GEOGRAM_API geogram_fprintf(FILE* out, const char* format, ...);
 #endif
 
 #endif
-
 
 /******* extracted from ../basic/thread_sync.h *******/
 
@@ -1735,7 +1799,7 @@ namespace GEO {
             _WriteBarrier(); // prevents compiler reordering
             x = 0;
         }
-        
+
     }
 }
 
@@ -1753,7 +1817,7 @@ namespace GEO {
         // - we are using C++17
         // - the Windows implementation that uses integers rather than
         //   std::atomic_flag needs an initialization value.
-#define GEOGRAM_SPINLOCK_INIT ATOMIC_FLAG_INIT 
+#define GEOGRAM_SPINLOCK_INIT ATOMIC_FLAG_INIT
 
         typedef std::atomic_flag spinlock;
 
@@ -1764,17 +1828,17 @@ namespace GEO {
                 }
 // If compiling in C++20 we can be slightly more efficient when spinning
 // (avoid unrequired atomic operations, just "peek" the flag)
-#if defined(__cpp_lib_atomic_flag_test)                
-                while (x.test(std::memory_order_relaxed)) 
+#if defined(__cpp_lib_atomic_flag_test)
+                while (x.test(std::memory_order_relaxed))
 #endif
                     geo_pause();
-            }            
+            }
         }
 
         inline void release_spinlock(volatile spinlock& x) {
-            x.clear(std::memory_order_release); 
+            x.clear(std::memory_order_release);
         }
-        
+
     }
 }
 #endif
@@ -1783,7 +1847,7 @@ namespace GEO {
 
 namespace GEO {
     namespace Process {
-    
+
         class BasicSpinLockArray {
         public:
             BasicSpinLockArray() : spinlocks_(nullptr), size_(0) {
@@ -1798,7 +1862,7 @@ namespace GEO {
             BasicSpinLockArray& operator=(
                 const BasicSpinLockArray& rhs
             ) = delete;
-            
+
             void resize(index_t size_in) {
                 delete[] spinlocks_;
                 spinlocks_ = new spinlock[size_in];
@@ -1855,13 +1919,13 @@ namespace GEO {
             ~CompactSpinLockArray() {
                 clear();
             }
-            
+
             CompactSpinLockArray(const CompactSpinLockArray& rhs) = delete;
 
             CompactSpinLockArray& operator=(
                 const CompactSpinLockArray& rhs
             ) = delete;
-            
+
             void resize(index_t size_in) {
                 if(size_ != size_in) {
                     size_ = size_in;
@@ -1878,14 +1942,14 @@ namespace GEO {
                 }
 // Test at compile time that we are using atomic uint32_t operations (and not
 // using an additional lock which would be catastrophic in terms of performance)
-#ifdef __cpp_lib_atomic_is_always_lock_free                
+#ifdef __cpp_lib_atomic_is_always_lock_free
                 static_assert(std::atomic<uint32_t>::is_always_lock_free);
 #else
 // If we cannot test that at compile time, we test that at runtime in debug
 // mode (so that we will be notified in the non-regression test if one of
 // the platforms has the problem, which is very unlikely though...)
                 geo_debug_assert(size_ == 0 || spinlocks_[0].is_lock_free());
-#endif                
+#endif
             }
 
             index_t size() const {
@@ -1925,7 +1989,7 @@ namespace GEO {
             std::atomic<uint32_t>* spinlocks_;
             index_t size_;
         };
-        
+
     }
 }
 
@@ -1941,7 +2005,6 @@ namespace GEO {
 
 #endif
 
-
 /******* extracted from ../basic/packed_arrays.h *******/
 
 #ifndef GEOGRAM_BASIC_PACKED_ARRAYS
@@ -1953,115 +2016,114 @@ namespace GEO {
 
     class GEOGRAM_API PackedArrays {
     public:
-        PackedArrays();
+    PackedArrays();
 
-        ~PackedArrays();
+    ~PackedArrays();
 
-        bool thread_safe() const {
-            return thread_safe_;
+    bool thread_safe() const {
+        return thread_safe_;
+    }
+
+    void set_thread_safe(bool flag);
+
+    void init(
+        index_t nb_arrays,
+        index_t Z1_block_size,
+        bool static_mode = false
+    );
+
+    void clear();
+
+    index_t nb_arrays() const {
+        return nb_arrays_;
+    }
+
+    index_t array_size(index_t array_index) const {
+        geo_debug_assert(array_index < nb_arrays_);
+        return Z1_[array_index * Z1_stride_];
+    }
+
+    void get_array(
+        index_t array_index, vector<index_t>& array, bool lock = true
+    ) const {
+        if(lock) {
+            lock_array(array_index);
         }
-
-        void set_thread_safe(bool flag);
-
-        void init(
-            index_t nb_arrays,
-            index_t Z1_block_size,
-            bool static_mode = false
-        );
-
-        void clear();
-
-        index_t nb_arrays() const {
-            return nb_arrays_;
+        array.resize(array_size(array_index));
+        if(array.size() != 0) {
+            get_array(array_index, &array[0], false);
         }
-
-        index_t array_size(index_t array_index) const {
-            geo_debug_assert(array_index < nb_arrays_);
-            return Z1_[array_index * Z1_stride_];
+        if(lock) {
+            unlock_array(array_index);
         }
+    }
 
-        void get_array(
-            index_t array_index, vector<index_t>& array, bool lock = true
-        ) const {
-            if(lock) {
-                lock_array(array_index);
-            }
-            array.resize(array_size(array_index));
-            if(array.size() != 0) {
-                get_array(array_index, &array[0], false);
-            }
-            if(lock) {
-                unlock_array(array_index);
-            }
+    void get_array(
+        index_t array_index, index_t* array, bool lock = true
+    ) const;
+
+    void set_array(
+        index_t array_index,
+        index_t array_size, const index_t* array_elements,
+        bool lock = true
+    );
+
+    void set_array(
+        index_t array_index,
+        const vector<index_t>& array,
+        bool lock = true
+    ) {
+        if(array.size() == 0) {
+            set_array(array_index, 0, nullptr, lock);
+        } else {
+            set_array(
+                array_index, index_t(array.size()), &array[0], lock
+            );
         }
+    }
 
-        void get_array(
-            index_t array_index, index_t* array, bool lock = true
-        ) const;
+    void resize_array(
+        index_t array_index, index_t array_size, bool lock
+    );
 
-        void set_array(
-            index_t array_index,
-            index_t array_size, const index_t* array_elements,
-            bool lock = true
-        );
-
-        void set_array(
-            index_t array_index,
-            const vector<index_t>& array,
-            bool lock = true
-        ) {
-            if(array.size() == 0) {
-                set_array(array_index, 0, nullptr, lock);
-            } else {
-                set_array(
-                    array_index, index_t(array.size()), &array[0], lock
-                );
-            }
+    void lock_array(index_t array_index) const {
+        if(thread_safe_) {
+            Z1_spinlocks_.acquire_spinlock(array_index);
         }
+    }
 
-        void resize_array(
-            index_t array_index, index_t array_size, bool lock
-        );
-
-        void lock_array(index_t array_index) const {
-            if(thread_safe_) {
-                Z1_spinlocks_.acquire_spinlock(array_index);
-            }
+    void unlock_array(index_t array_index) const {
+        if(thread_safe_) {
+            Z1_spinlocks_.release_spinlock(array_index);
         }
+    }
 
-        void unlock_array(index_t array_index) const {
-            if(thread_safe_) {
-                Z1_spinlocks_.release_spinlock(array_index);
-            }
-        }
-
-        void show_stats();
+    void show_stats();
 
     protected:
-        bool static_mode() const {
-            return ZV_ == nullptr;
-        }
+    bool static_mode() const {
+        return ZV_ == nullptr;
+    }
 
     private:
-        
-        PackedArrays(const PackedArrays& rhs);
+    
+    PackedArrays(const PackedArrays& rhs);
 
-        
-        PackedArrays& operator= (const PackedArrays& rhs);
+    
+    PackedArrays& operator= (const PackedArrays& rhs);
 
     private:
-        index_t nb_arrays_;
-        index_t Z1_block_size_;
-        index_t Z1_stride_;
-        index_t* Z1_;
-        index_t** ZV_;
-        bool thread_safe_;
-        mutable Process::SpinLockArray Z1_spinlocks_;
+    index_t nb_arrays_;
+    index_t Z1_block_size_;
+    index_t Z1_stride_;
+    index_t* Z1_;
+    index_t** ZV_;
+    bool thread_safe_;
+    mutable Process::SpinLockArray Z1_spinlocks_;
     };
 }
 
 #endif
-
 
 /******* extracted from ../basic/progress.h *******/
 
@@ -2082,7 +2144,7 @@ namespace GEO {
 
     protected:
         
-         ~ProgressClient() override;
+        ~ProgressClient() override;
     };
 
     
@@ -2118,62 +2180,61 @@ namespace GEO {
 
     class GEOGRAM_API ProgressTask {
     public:
-        ProgressTask(
-            const std::string& task_name, index_t max_steps,
-            bool quiet 
-        );
+    ProgressTask(
+        const std::string& task_name, index_t max_steps,
+        bool quiet
+    );
 
-        ProgressTask(
-            const std::string& task_name = "", index_t max_steps = 100
-        );
+    ProgressTask(
+        const std::string& task_name = "", index_t max_steps = 100
+    );
 
-        virtual ~ProgressTask();
+    virtual ~ProgressTask();
 
-        virtual void progress(index_t step);
+    virtual void progress(index_t step);
 
-        virtual void next();
+    virtual void next();
 
-        bool is_canceled() const;
+    bool is_canceled() const;
 
-        void reset();
+    void reset();
 
-        void reset(index_t max_steps);
+    void reset(index_t max_steps);
 
-        const std::string& task_name() const {
-            return task_name_;
-        }
+    const std::string& task_name() const {
+        return task_name_;
+    }
 
-        double start_time() const {
-            return start_time_;
-        }
+    double start_time() const {
+        return start_time_;
+    }
 
-        index_t max_steps() const {
-            return max_steps_;
-        }
+    index_t max_steps() const {
+        return max_steps_;
+    }
 
-        index_t step() const {
-            return step_;
-        }
+    index_t step() const {
+        return step_;
+    }
 
-        index_t percent() const {
-            return percent_;
-        }
+    index_t percent() const {
+        return percent_;
+    }
 
     protected:
-        virtual void update();
+    virtual void update();
 
     private:
-        std::string task_name_;
-        double start_time_;
-        bool quiet_;
-        index_t max_steps_;
-        index_t step_;
-        index_t percent_;
+    std::string task_name_;
+    double start_time_;
+    bool quiet_;
+    index_t max_steps_;
+    index_t step_;
+    index_t percent_;
     };
 }
 
 #endif
-
 
 /******* extracted from ../basic/process.h *******/
 
@@ -2217,7 +2278,7 @@ namespace GEO {
 
         index_t id_;
 
-        // ThreadManager needs to access set_current() and 
+        // ThreadManager needs to access set_current() and
         // set_id().
         friend class ThreadManager;
     };
@@ -2287,10 +2348,10 @@ namespace GEO {
         void GEOGRAM_API terminate();
 
 
-	void GEOGRAM_API sleep(index_t microseconds);
-	
+        void GEOGRAM_API sleep(index_t microseconds);
+
         void GEOGRAM_API show_stats();
-        
+
         void GEOGRAM_API brute_force_kill();
 
         index_t GEOGRAM_API maximum_concurrent_threads();
@@ -2328,44 +2389,43 @@ namespace GEO {
         void print_stack_trace();
     }
 
-     void GEOGRAM_API parallel_for(
+    void GEOGRAM_API parallel_for(
         index_t from, index_t to, std::function<void(index_t)> func,
         index_t threads_per_core = 1,
         bool interleaved = false
     );
 
-     void GEOGRAM_API parallel_for_slice(
-	 index_t from, index_t to, std::function<void(index_t, index_t)> func,
-	 index_t threads_per_core = 1
-     );
+    void GEOGRAM_API parallel_for_slice(
+        index_t from, index_t to, std::function<void(index_t, index_t)> func,
+        index_t threads_per_core = 1
+    );
 
-     void GEOGRAM_API parallel(
-	 std::function<void()> f1,
-	 std::function<void()> f2	 
-     );
+    void GEOGRAM_API parallel(
+        std::function<void()> f1,
+        std::function<void()> f2
+    );
 
-     void GEOGRAM_API parallel(
-	 std::function<void()> f1,
-	 std::function<void()> f2,
-	 std::function<void()> f3,
-	 std::function<void()> f4	 
-     );
+    void GEOGRAM_API parallel(
+        std::function<void()> f1,
+        std::function<void()> f2,
+        std::function<void()> f3,
+        std::function<void()> f4
+    );
 
-     void GEOGRAM_API parallel(
-	 std::function<void()> f1,
-	 std::function<void()> f2,
-	 std::function<void()> f3,
-	 std::function<void()> f4,
-	 std::function<void()> f5,
-	 std::function<void()> f6,
-	 std::function<void()> f7,
-	 std::function<void()> f8	 
-     );
-     
+    void GEOGRAM_API parallel(
+        std::function<void()> f1,
+        std::function<void()> f2,
+        std::function<void()> f3,
+        std::function<void()> f4,
+        std::function<void()> f5,
+        std::function<void()> f6,
+        std::function<void()> f7,
+        std::function<void()> f8
+    );
+
 }
 
 #endif
-
 
 /******* extracted from ../basic/psm.h *******/
 
@@ -2384,22 +2444,22 @@ namespace GEO {
 #ifndef GEOGRAM_BASIC_ASSERT
 
 #define geo_assert(x) assert(x)
-#define geo_range_assert(x, min_val, max_val) \
+#define geo_range_assert(x, min_val, max_val)           \
     assert((x) >= (min_val) && (x) <= (max_val))
 #define geo_assert_not_reached assert(0)
 
 #ifdef GEO_DEBUG
 #define geo_debug_assert(x) assert(x)
-#define geo_debug_range_assert(x, min_val, max_val) \
+#define geo_debug_range_assert(x, min_val, max_val)     \
     assert((x) >= (min_val) && (x) <= (max_val))
 #else
-#define geo_debug_assert(x) 
+#define geo_debug_assert(x)
 #define geo_debug_range_assert(x, min_val, max_val)
 #endif
 
 #ifdef GEO_PARANOID
 #define geo_parano_assert(x) geo_assert(x)
-#define geo_parano_range_assert(x, min_val, max_val) \
+#define geo_parano_range_assert(x, min_val, max_val)    \
     geo_range_assert(x, min_val, max_val)
 #else
 #define geo_parano_assert(x)
@@ -2432,7 +2492,7 @@ namespace GEO {
             return std::cerr << "W[" << name << "]";
         }
     }
-    
+
 }
 
 #endif
@@ -2460,23 +2520,23 @@ namespace GEO {
 
     class GEOGRAM_API InstanceRepo {
     public:
-        typedef Counted Instance;
+    typedef Counted Instance;
 
-        template <class InstanceType>
-        static InstanceType& instance() {
-            const std::string name = typeid(InstanceType).name();
-            Instance* instance = get(name);
-            if(instance == nullptr) {
-                instance = new InstanceType;
-                add(name, instance);
-            }
-            return *static_cast<InstanceType*>(instance);
+    template <class InstanceType>
+    static InstanceType& instance() {
+        const std::string name = typeid(InstanceType).name();
+        Instance* instance = get(name);
+        if(instance == nullptr) {
+            instance = new InstanceType;
+            add(name, instance);
         }
+        return *static_cast<InstanceType*>(instance);
+    }
 
     private:
-        static void add(const std::string& name, Instance* instance);
+    static void add(const std::string& name, Instance* instance);
 
-        static Instance* get(const std::string& name);
+    static Instance* get(const std::string& name);
     };
 
     
@@ -2580,14 +2640,13 @@ namespace GEO {
         }
     };
 
-#define geo_register_creator(FactoryType, ConcreteType, name) \
-    static FactoryType::RegisterCreator<ConcreteType> \
-    CPP_CONCAT(Factory_register_creator_, __LINE__) (name); \
+#define geo_register_creator(FactoryType, ConcreteType, name)           \
+    static FactoryType::RegisterCreator<ConcreteType>                   \
+    CPP_CONCAT(Factory_register_creator_, __LINE__) (name);             \
     geo_argused(CPP_CONCAT(Factory_register_creator_, __LINE__))
 }
 
 #endif
-
 
 /******* extracted from ../basic/determinant.h *******/
 
@@ -2602,31 +2661,31 @@ namespace GEO {
 
     template <class T>
     inline T det2x2(
-        const T& a11, const T& a12,                    
+        const T& a11, const T& a12,
         const T& a21, const T& a22
-    ) {                                 
+    ) {
         return a11*a22-a12*a21 ;
     }
 
-    template <class T>    
+    template <class T>
     inline T det3x3(
-        const T& a11, const T& a12, const T& a13,                
-        const T& a21, const T& a22, const T& a23,                
+        const T& a11, const T& a12, const T& a13,
+        const T& a21, const T& a22, const T& a23,
         const T& a31, const T& a32, const T& a33
     ) {
-    return
-         a11*det2x2(a22,a23,a32,a33)   
-        -a21*det2x2(a12,a13,a32,a33)   
-        +a31*det2x2(a12,a13,a22,a23);
-    }   
+        return
+            a11*det2x2(a22,a23,a32,a33)
+            -a21*det2x2(a12,a13,a32,a33)
+            +a31*det2x2(a12,a13,a22,a23);
+    }
 
 
-    template <class T>    
+    template <class T>
     inline T det4x4(
         const T& a11, const T& a12, const T& a13, const T& a14,
-        const T& a21, const T& a22, const T& a23, const T& a24,               
-        const T& a31, const T& a32, const T& a33, const T& a34,  
-        const T& a41, const T& a42, const T& a43, const T& a44  
+        const T& a21, const T& a22, const T& a23, const T& a24,
+        const T& a31, const T& a32, const T& a33, const T& a34,
+        const T& a41, const T& a42, const T& a43, const T& a44
     ) {
         T m12 = a21*a12 - a11*a22;
         T m13 = a31*a12 - a11*a32;
@@ -2639,9 +2698,9 @@ namespace GEO {
         T m124 = m24*a13 - m14*a23 + m12*a43;
         T m134 = m34*a13 - m14*a33 + m13*a43;
         T m234 = m34*a23 - m24*a33 + m23*a43;
-        
+
         return (m234*a14 - m134*a24 + m124*a34 - m123*a44);
-    }   
+    }
 }
 
 #endif
@@ -2656,11 +2715,11 @@ namespace GEO {
 namespace GEO {
 
     template <class T> class rationalg {
-      public:
+    public:
         typedef T value_type;
 
         rationalg() = default;
-        
+
         explicit rationalg(double x) : num_(x), denom_(1.0) {
         }
 
@@ -2669,182 +2728,182 @@ namespace GEO {
 
         explicit rationalg(T&& x) : num_(x), denom_(1.0) {
         }
-        
+
         explicit rationalg(double num, double denom)
-	    : num_(num), denom_(denom) {
+            : num_(num), denom_(denom) {
         }
-        
+
         explicit rationalg(const T& num, const T& denom)
-	    : num_(num), denom_(denom) {
+            : num_(num), denom_(denom) {
         }
 
         explicit rationalg(
             T&& num, T&& denom
         ) : num_(num), denom_(denom) {
         }
-            
+
         rationalg(const rationalg<T>& rhs) = default;
-        
+
         rationalg(rationalg<T>&& rhs) = default;
-        
+
         rationalg<T>& operator= (const rationalg<T>& rhs) = default;
 
         rationalg<T>& operator= (rationalg<T>&& rhs) = default;
-        
-	const T& num() const {
-	    return num_;
-	}
 
-	const T& denom() const {
-	    return denom_;
-	}
+        const T& num() const {
+            return num_;
+        }
 
-	 T& num() {
-	    return num_;
-	}
+        const T& denom() const {
+            return denom_;
+        }
 
-	 T& denom() {
-	    return denom_;
-	}
+        T& num() {
+            return num_;
+        }
+
+        T& denom() {
+            return denom_;
+        }
 
         void optimize() {
             Numeric::optimize_number_representation(num_);
             Numeric::optimize_number_representation(denom_);
         }
-         
+
         
 
         rationalg<T>& operator+= (const rationalg<T>& rhs) {
-	    if(has_same_denom(rhs)) {
-		num_ += rhs.num_;
-	    } else {
-		num_ = num_ * rhs.denom_ + rhs.num_ * denom_;	    
-		denom_ *= rhs.denom_;
-	    }
-	    return *this;
-	}
+            if(has_same_denom(rhs)) {
+                num_ += rhs.num_;
+            } else {
+                num_ = num_ * rhs.denom_ + rhs.num_ * denom_;
+                denom_ *= rhs.denom_;
+            }
+            return *this;
+        }
 
         rationalg<T>& operator-= (const rationalg<T>& rhs) {
-	    if(has_same_denom(rhs)) {
-		num_ -= rhs.num_;
-	    } else {
-		num_ = num_ * rhs.denom_ - rhs.num_ * denom_;	    
-		denom_ *= rhs.denom_;
-	    }
-	    return *this;
-	}
+            if(has_same_denom(rhs)) {
+                num_ -= rhs.num_;
+            } else {
+                num_ = num_ * rhs.denom_ - rhs.num_ * denom_;
+                denom_ *= rhs.denom_;
+            }
+            return *this;
+        }
 
         rationalg<T>& operator*= (const rationalg<T>& rhs) {
-	    num_ *= rhs.num_;
-	    denom_ *= rhs.denom_;
-	    return *this;
-	}
+            num_ *= rhs.num_;
+            denom_ *= rhs.denom_;
+            return *this;
+        }
 
         rationalg<T>& operator/= (const rationalg<T>& rhs) {
-	    num_ *= rhs.denom_;
-	    denom_ *= rhs.num_;
-	    return *this;
-	}
-	
+            num_ *= rhs.denom_;
+            denom_ *= rhs.num_;
+            return *this;
+        }
+
         rationalg<T>& operator+= (double rhs) {
-	    num_ += denom_ * T(rhs);
-	    return *this;
-	}
+            num_ += denom_ * T(rhs);
+            return *this;
+        }
 
         rationalg<T>& operator-= (double rhs) {
-	    num_ -= denom_ * T(rhs);
-	    return *this;
-	}
+            num_ -= denom_ * T(rhs);
+            return *this;
+        }
 
         rationalg<T>& operator*= (double rhs) {
-	    num_ *= T(rhs);
-	    return *this;
-	}
+            num_ *= T(rhs);
+            return *this;
+        }
 
         rationalg<T>& operator/= (double rhs) {
-	    denom_ *= T(rhs);
-	    return *this;
-	}
-	
+            denom_ *= T(rhs);
+            return *this;
+        }
+
         
 
         rationalg<T> operator+ (const rationalg<T>& rhs) const {
-	    if(has_same_denom(rhs)) {
-		return rationalg(
-		    num_ + rhs.num_,
-		    denom_
-		);
-	    }
-	    return rationalg(
-		num_ * rhs.denom_ + rhs.num_ * denom_,
-		denom_ * rhs.denom_
-	    );
-	}
+            if(has_same_denom(rhs)) {
+                return rationalg(
+                    num_ + rhs.num_,
+                    denom_
+                );
+            }
+            return rationalg(
+                num_ * rhs.denom_ + rhs.num_ * denom_,
+                denom_ * rhs.denom_
+            );
+        }
 
         rationalg<T> operator- (const rationalg<T>& rhs) const {
-	    if(has_same_denom(rhs)) {
-		return rationalg(
-		    num_ - rhs.num_,
-		    denom_
-		);
-	    }
-	    return rationalg(
-		num_ * rhs.denom_ - rhs.num_ * denom_,
-		denom_ * rhs.denom_
-	    );
-	}
+            if(has_same_denom(rhs)) {
+                return rationalg(
+                    num_ - rhs.num_,
+                    denom_
+                );
+            }
+            return rationalg(
+                num_ * rhs.denom_ - rhs.num_ * denom_,
+                denom_ * rhs.denom_
+            );
+        }
 
         rationalg<T> operator* (const rationalg<T>& rhs) const {
-	    return rationalg(
-		num_ * rhs.num_,
-		denom_ * rhs.denom_
-	    );
-	}
+            return rationalg(
+                num_ * rhs.num_,
+                denom_ * rhs.denom_
+            );
+        }
 
         rationalg<T> operator/ (const rationalg<T>& rhs) const {
-	    return rationalg(
-		num_ * rhs.denom_,
-		denom_ * rhs.num_
-	    );
-	}
+            return rationalg(
+                num_ * rhs.denom_,
+                denom_ * rhs.num_
+            );
+        }
 
-	
+
         rationalg<T> operator+ (double rhs) const {
-	    return rationalg(
-		num_ + T(rhs) * denom_,
-		denom_
-	    );
-	}
+            return rationalg(
+                num_ + T(rhs) * denom_,
+                denom_
+            );
+        }
 
         rationalg<T> operator- (double rhs) const {
-	    return rationalg(
-		num_ - T(rhs) * denom_,
-		denom_
-	    );
-	}
+            return rationalg(
+                num_ - T(rhs) * denom_,
+                denom_
+            );
+        }
 
         rationalg<T> operator* (double rhs) const {
-	    return rationalg(
-		num_ * T(rhs),
-		denom_
-	    );
-	}
+            return rationalg(
+                num_ * T(rhs),
+                denom_
+            );
+        }
 
         rationalg<T> operator/ (double rhs) const {
-	    return rationalg(
-		num_,
-		denom_* T(rhs)
-	    );
-	}
-	
+            return rationalg(
+                num_,
+                denom_* T(rhs)
+            );
+        }
+
         
 
         rationalg<T> operator- () const {
-	    return rationalg(
-		-num_, 
-		denom_
-	    );
-	}
+            return rationalg(
+                -num_,
+                denom_
+            );
+        }
 
         
 
@@ -2852,7 +2911,7 @@ namespace GEO {
             geo_debug_assert(denom_.sign() != ZERO);
             return Sign(num_.sign() * denom_.sign());
         }
-        
+
         
 
         Sign compare(const rationalg<T>& rhs) const {
@@ -2873,13 +2932,13 @@ namespace GEO {
                 num_.compare(T(rhs)*denom_) * denom_.sign()
             );
         }
-        
+
         bool operator> (const rationalg<T>& rhs) const {
             return (int(compare(rhs))>0);
         }
 
         bool operator>= (const rationalg<T>& rhs) const {
-            return (int(compare(rhs))>=0);            
+            return (int(compare(rhs))>=0);
         }
 
         bool operator< (const rationalg<T>& rhs) const {
@@ -2891,19 +2950,19 @@ namespace GEO {
         }
 
         bool operator> (double rhs) const {
-            return (int(compare(rhs))>0);            
+            return (int(compare(rhs))>0);
         }
 
         bool operator>= (double rhs) const {
-            return (int(compare(rhs))>=0);            
+            return (int(compare(rhs))>=0);
         }
 
         bool operator< (double rhs) const {
-            return (int(compare(rhs))<0);            
+            return (int(compare(rhs))<0);
         }
 
         bool operator<= (double rhs) const {
-            return (int(compare(rhs))<=0);                        
+            return (int(compare(rhs))<=0);
         }
 
         
@@ -2911,20 +2970,20 @@ namespace GEO {
         double estimate() const {
             return num_.estimate() / denom_.estimate();
         }
-        
-      protected:
-	void copy(const rationalg<T>& rhs) {
-	    num_ = rhs.num_;
-	    denom_ = rhs.denom_;
-	}
 
-	bool has_same_denom(const rationalg<T>& rhs) const {
+    protected:
+        void copy(const rationalg<T>& rhs) {
+            num_ = rhs.num_;
+            denom_ = rhs.denom_;
+        }
+
+        bool has_same_denom(const rationalg<T>& rhs) const {
             return denom_ == rhs.denom_;
-	}
-	
-      private:
-	T num_;
-	T denom_;
+        }
+
+    private:
+        T num_;
+        T denom_;
     };
 
     
@@ -2934,52 +2993,52 @@ namespace GEO {
         return b + a;
     }
 
-    template <class T>    
+    template <class T>
     inline rationalg<T> operator- (double a, const rationalg<T>& b) {
         rationalg<T> result = b - a;
         result.num().negate();
         return result;
     }
 
-    template <class T>    
+    template <class T>
     inline rationalg<T> operator* (double a, const rationalg<T>& b) {
         return b * a;
     }
 
-    template <class T>    
+    template <class T>
     inline rationalg<T> operator/ (double a, const rationalg<T>& b) {
         return rationalg<T>(
-	    T(a)*b.denom(),
-	    b.num()
-	);
+            T(a)*b.denom(),
+            b.num()
+        );
     }
-    
-    template <class T>    
+
+    template <class T>
     inline bool operator== (const rationalg<T>& a, const rationalg<T>& b) {
         return (a.compare(b) == ZERO);
     }
 
-    template <class T>    
+    template <class T>
     inline bool operator== (const rationalg<T>& a, double b) {
         return (a.compare(b) == ZERO);
     }
 
-    template <class T>    
+    template <class T>
     inline bool operator== (double a, const rationalg<T>& b) {
         return (b.compare(a) == ZERO);
     }
 
-    template <class T>    
+    template <class T>
     inline bool operator!= (const rationalg<T>& a, const rationalg<T>& b) {
         return (a.compare(b) != ZERO);
     }
 
-    template <class T>    
+    template <class T>
     inline bool operator!= (const rationalg<T>& a, double b) {
         return (a.compare(b) != ZERO);
     }
 
-    template <class T>    
+    template <class T>
     inline bool operator!= (double a, const rationalg<T>& b) {
         return (b.compare(a) != ZERO);
     }
@@ -2995,7 +3054,7 @@ namespace GEO {
     ) {
         return a.compare(b);
     }
-    
+
     namespace Numeric {
 
         template <class T> inline void optimize_number_representation(
@@ -3003,15 +3062,14 @@ namespace GEO {
         ) {
             x.optimize();
         }
-        
+
     }
 
     
-    
+
 }
 
 #endif
-
 
 /******* extracted from ../basic/vecg.h *******/
 
@@ -3031,7 +3089,7 @@ namespace GEO {
     class vecng {
     public:
         
-        static const index_t dim = DIM;
+        static constexpr index_t dim = DIM;
 
         
         typedef vecng<DIM, T> vector_type;
@@ -3081,7 +3139,7 @@ namespace GEO {
                 ++i;
             }
         }
-        
+
         index_t dimension() const {
             return DIM;
         }
@@ -3278,7 +3336,7 @@ namespace GEO {
     class vecng<2, T> {
     public:
         
-        static const index_t dim = 2;
+        static constexpr index_t dim = 2;
 
         
         typedef vecng<dim, T> vector_type;
@@ -3320,7 +3378,7 @@ namespace GEO {
                 ++i;
             }
         }
-        
+
         
         inline T length2() const {
             return x * x + y * y;
@@ -3432,7 +3490,7 @@ namespace GEO {
             Numeric::optimize_number_representation(x);
             Numeric::optimize_number_representation(y);
         }
-        
+
         
         T x;
         
@@ -3466,7 +3524,7 @@ namespace GEO {
     class vecng<3, T> {
     public:
         
-        static const index_t dim = 3;
+        static constexpr index_t dim = 3;
 
         
         typedef vecng<dim, T> vector_type;
@@ -3512,7 +3570,7 @@ namespace GEO {
                 ++i;
             }
         }
-        
+
         
         inline T length2() const {
             return x * x + y * y + z * z;
@@ -3630,7 +3688,7 @@ namespace GEO {
             Numeric::optimize_number_representation(y);
             Numeric::optimize_number_representation(z);
         }
-        
+
         
         T x;
         
@@ -3670,7 +3728,7 @@ namespace GEO {
     class vecng<4, T> {
     public:
         
-        static const index_t dim = 4;
+        static constexpr index_t dim = 4;
 
         
         typedef vecng<dim, T> vector_type;
@@ -3720,7 +3778,7 @@ namespace GEO {
                 ++i;
             }
         }
-        
+
         
         inline T length2() const {
             return x * x + y * y + z * z + w * w;
@@ -3877,8 +3935,30 @@ namespace GEO {
     inline std::istream& operator>> (
         std::istream& in, GEO::vecng<DIM, T>& v
     ) {
+        char c;
+        while(isspace(in.peek())) {
+            in.get(c);
+        }
+        if(in.peek() == '[') {
+            in.get(c);
+        }
+        while(isspace(in.peek())) {
+            in.get(c);
+        }
         for(index_t i = 0; i < DIM; i++) {
             in >> v[i];
+            while(isspace(in.peek())) {
+                in.get(c);
+            }
+            if(in.peek() == ',') {
+                in.get(c);
+            }
+            while(isspace(in.peek())) {
+                in.get(c);
+            }
+        }
+        if(in.peek() == ']') {
+            in.get(c);
         }
         return in;
     }
@@ -3886,8 +3966,8 @@ namespace GEO {
     
 
     namespace Numeric {
-        
-        template<class T> 
+
+        template<class T>
         inline void optimize_number_representation(
             vecng<2,T>& v
         ) {
@@ -3900,15 +3980,14 @@ namespace GEO {
         ) {
             v.optimize();
         }
-        
+
     }
 
     
-    
+
 }
 
 #endif
-
 
 /******* extracted from ../basic/vechg.h *******/
 
@@ -3928,7 +4007,7 @@ namespace GEO {
         typedef T value_type;
 
         vec2Hg() = default;
-        
+
         vec2Hg(const T& x_in, const T& y_in, const T& w_in) :
             x(x_in),
             y(y_in),
@@ -3939,7 +4018,7 @@ namespace GEO {
             x(x_in),
             y(y_in),
             w(w_in) {
-        }        
+        }
 
         vec2Hg(T&& x_in, T&& y_in, T&& w_in) :
             x(x_in),
@@ -3951,18 +4030,18 @@ namespace GEO {
 
         vec2Hg(vec2Hg&& rhs) = default;
 
-        template <class T2> explicit vec2Hg(const vecng<2,T2>& rhs) : 
+        template <class T2> explicit vec2Hg(const vecng<2,T2>& rhs) :
             x(rhs.x),
             y(rhs.y),
             w(1.0) {
         }
 
-        template <class T2> explicit vec2Hg(const vec2Hg<T2>& rhs) : 
+        template <class T2> explicit vec2Hg(const vec2Hg<T2>& rhs) :
             x(rhs.x),
             y(rhs.y),
             w(rhs.w) {
         }
-        
+
         vec2Hg& operator=(const vec2Hg& rhs) = default;
         vec2Hg& operator=(vec2Hg&& rhs) = default;
 
@@ -3989,7 +4068,7 @@ namespace GEO {
             Numeric::optimize_number_representation(y);
             Numeric::optimize_number_representation(w);
         }
-        
+
         T x;
         T y;
         T w;
@@ -4013,7 +4092,7 @@ namespace GEO {
             p1.w*p2.w
         );
     }
-    
+
     
 
     template <class T> class vec2HgLexicoCompare {
@@ -4030,16 +4109,16 @@ namespace GEO {
             return (s == POSITIVE);
         }
     };
+
     
-    
-    
+
     template <class T> class vec3Hg {
     public:
         
         typedef T value_type;
 
         vec3Hg() = default;
-        
+
         vec3Hg(const T& x_in, const T& y_in, const T& z_in, const T& w_in) :
             x(x_in),
             y(y_in),
@@ -4059,26 +4138,26 @@ namespace GEO {
             y(y_in),
             z(z_in),
             w(w_in) {
-        }        
-        
+        }
+
         vec3Hg(const vec3Hg& rhs) = default;
 
         vec3Hg(vec3Hg&& rhs) = default;
 
-        template <class T2> explicit vec3Hg(const vecng<3,T2>& rhs) : 
+        template <class T2> explicit vec3Hg(const vecng<3,T2>& rhs) :
             x(rhs.x),
             y(rhs.y),
             z(rhs.z),
             w(1.0) {
         }
 
-        template <class T2> explicit vec3Hg(const vec3Hg<T2>& rhs) : 
+        template <class T2> explicit vec3Hg(const vec3Hg<T2>& rhs) :
             x(rhs.x),
             y(rhs.y),
             z(rhs.z),
             w(rhs.w) {
         }
-        
+
         vec3Hg& operator=(const vec3Hg& rhs) = default;
         vec3Hg& operator=(vec3Hg&& rhs) = default;
 
@@ -4106,7 +4185,7 @@ namespace GEO {
             Numeric::optimize_number_representation(z);
             Numeric::optimize_number_representation(w);
         }
-        
+
         T x;
         T y;
         T z;
@@ -4114,7 +4193,7 @@ namespace GEO {
     };
 
     
-    
+
     template <class T> inline vec3Hg<T> operator-(
         const vec3Hg<T>& p1, const vec3Hg<T>& p2
     ) {
@@ -4129,7 +4208,7 @@ namespace GEO {
         return vec3Hg<T>(
             det2x2(p1.x,p1.w,p2.x,p2.w),
             det2x2(p1.y,p1.w,p2.y,p2.w),
-            det2x2(p1.z,p1.w,p2.z,p2.w),            
+            det2x2(p1.z,p1.w,p2.z,p2.w),
             p1.w * p2.w
         );
     }
@@ -4154,7 +4233,7 @@ namespace GEO {
             if(s == NEGATIVE) {
                 return false;
             }
-        
+
             s = Numeric::ratio_compare(v2.z, v2.w, v1.z, v1.w);
             return (s == POSITIVE);
         }
@@ -4175,7 +4254,7 @@ namespace GEO {
             st_d
         );
     }
-    
+
     template <class T> inline vec3Hg<T> mix(
         const rationalg<T>& t,
         const vecng<3,double>& p1, const vecng<3,double>& p2
@@ -4242,8 +4321,8 @@ namespace GEO {
     
 
     namespace Numeric {
-        
-        template<class T> 
+
+        template<class T>
         inline void optimize_number_representation(vec2Hg<T>& v) {
             v.optimize();
         }
@@ -4252,7 +4331,7 @@ namespace GEO {
         inline void optimize_number_representation(vec3Hg<T>& v) {
             v.optimize();
         }
-        
+
     }
 
     
@@ -4260,7 +4339,6 @@ namespace GEO {
 
 
 #endif
-
 
 /******* extracted from ../basic/matrix.h *******/
 
@@ -4285,7 +4363,7 @@ namespace GEO {
         typedef FT value_type;
 
         
-        static const index_t dim = DIM;
+        static constexpr index_t dim = DIM;
 
         inline Matrix() {
             load_identity();
@@ -4314,7 +4392,7 @@ namespace GEO {
             }
         }
 
-        
+
         inline index_t dimension() const {
             return DIM;
         }
@@ -4346,7 +4424,7 @@ namespace GEO {
             }
             return true;
         }
-        
+
         inline FT& operator() (index_t i, index_t j) {
             geo_debug_assert(i < DIM);
             geo_debug_assert(j < DIM);
@@ -4487,7 +4565,7 @@ namespace GEO {
                     }
                 }
             }
-            
+
             return true;
         }
 
@@ -4596,11 +4674,10 @@ namespace GEO {
     }
 
     
-    
+
 }
 
 #endif
-
 
 /******* extracted from ../basic/geometry.h *******/
 
@@ -4625,14 +4702,14 @@ namespace GEO {
 
     typedef vecng<4, Numeric::float32> vec4f;
 
-   
+
     typedef vecng<2, Numeric::int32> vec2i;
 
     typedef vecng<3, Numeric::int32> vec3i;
 
     typedef vecng<4, Numeric::int32> vec4i;
-   
-   
+
+
     typedef Matrix<2, Numeric::float64> mat2;
 
     typedef Matrix<3, Numeric::float64> mat3;
@@ -4664,8 +4741,8 @@ namespace GEO {
             M(3,0), M(3,1), M(3,2), M(3,3)
         );
     }
+
     
-        
 
     namespace Geom {
 
@@ -4704,13 +4781,13 @@ namespace GEO {
         }
 
         inline double cos_angle(const vec3& a, const vec3& b) {
-	    double lab = ::sqrt(length2(a)*length2(b));
+            double lab = ::sqrt(length2(a)*length2(b));
             double result = (lab > 1e-50) ? (dot(a, b) / lab) : 1.0;
             // Numerical precision problem may occur, and generate
             // normalized dot products that are outside the valid
             // range of acos.
-	    geo_clamp(result, -1.0, 1.0);
-	    return result;
+            geo_clamp(result, -1.0, 1.0);
+            return result;
         }
 
         inline double angle(const vec3& a, const vec3& b) {
@@ -4718,13 +4795,13 @@ namespace GEO {
         }
 
         inline double cos_angle(const vec2& a, const vec2& b) {
-	    double lab = ::sqrt(length2(a)*length2(b));
+            double lab = ::sqrt(length2(a)*length2(b));
             double result = (lab > 1e-20) ? (dot(a, b) / lab) : 1.0;
             // Numerical precision problem may occur, and generate
             // normalized dot products that are outside the valid
             // range of acos.
-	    geo_clamp(result, -1.0, 1.0);
-	    return result;
+            geo_clamp(result, -1.0, 1.0);
+            return result;
         }
 
         inline double det(const vec2& a, const vec2& b) {
@@ -4733,8 +4810,8 @@ namespace GEO {
 
         inline double angle(const vec2& a, const vec2& b) {
             return det(a, b) > 0 ?
-                   ::acos(cos_angle(a, b)) :
-                   -::acos(cos_angle(a, b));
+                ::acos(cos_angle(a, b)) :
+                -::acos(cos_angle(a, b));
         }
 
         inline vec3 triangle_normal(
@@ -4743,39 +4820,39 @@ namespace GEO {
             return cross(p2 - p1, p3 - p1);
         }
 
-	inline double triangle_area_3d(
-	    const double* p1, const double* p2, const double* p3
-	) {
-	    double Ux = p2[0] - p1[0];
-	    double Uy = p2[1] - p1[1];
-	    double Uz = p2[2] - p1[2];
-	    
-	    double Vx = p3[0] - p1[0];
-	    double Vy = p3[1] - p1[1];
-	    double Vz = p3[2] - p1[2];
-	    
-	    double Nx = Uy*Vz - Uz*Vy;
-	    double Ny = Uz*Vx - Ux*Vz;
-	    double Nz = Ux*Vy - Uy*Vx;
-	    return 0.5 * ::sqrt(Nx*Nx+Ny*Ny+Nz*Nz);
-	}
-	
+        inline double triangle_area_3d(
+            const double* p1, const double* p2, const double* p3
+        ) {
+            double Ux = p2[0] - p1[0];
+            double Uy = p2[1] - p1[1];
+            double Uz = p2[2] - p1[2];
+
+            double Vx = p3[0] - p1[0];
+            double Vy = p3[1] - p1[1];
+            double Vz = p3[2] - p1[2];
+
+            double Nx = Uy*Vz - Uz*Vy;
+            double Ny = Uz*Vx - Ux*Vz;
+            double Nz = Ux*Vy - Uy*Vx;
+            return 0.5 * ::sqrt(Nx*Nx+Ny*Ny+Nz*Nz);
+        }
+
         inline double triangle_area(
             const vec3& p1, const vec3& p2, const vec3& p3
         ) {
-	    return triangle_area_3d(p1.data(), p2.data(), p3.data());
+            return triangle_area_3d(p1.data(), p2.data(), p3.data());
         }
 
         inline double triangle_signed_area_2d(
             const double* p1, const double* p2, const double* p3
         ) {
-	    double a = p2[0]-p1[0];
-	    double b = p3[0]-p1[0];
-	    double c = p2[1]-p1[1];
-	    double d = p3[1]-p1[1];
-	    return 0.5*(a*d-b*c);
+            double a = p2[0]-p1[0];
+            double b = p3[0]-p1[0];
+            double c = p2[1]-p1[1];
+            double d = p3[1]-p1[1];
+            return 0.5*(a*d-b*c);
         }
-	
+
         inline double triangle_signed_area(
             const vec2& p1, const vec2& p2, const vec2& p3
         ) {
@@ -4791,9 +4868,9 @@ namespace GEO {
         inline double triangle_area_2d(
             const double* p1, const double* p2, const double* p3
         ) {
-	    return ::fabs(triangle_signed_area_2d(p1,p2,p3));
-	}
-	
+            return ::fabs(triangle_signed_area_2d(p1,p2,p3));
+        }
+
         vec2 GEOGRAM_API triangle_circumcenter(
             const vec2& p1, const vec2& p2, const vec2& p3
         );
@@ -4926,7 +5003,7 @@ namespace GEO {
         double a, b, c, d;
     };
 
-   
+    
 
     class Box {
     public:
@@ -4947,7 +5024,7 @@ namespace GEO {
     };
 
     typedef Box Box3d;
-    
+
     inline bool bboxes_overlap(const Box& B1, const Box& B2) {
         for(coord_index_t c = 0; c < 3; ++c) {
             if(B1.xyz_max[c] < B2.xyz_min[c]) {
@@ -4967,7 +5044,7 @@ namespace GEO {
         }
     }
 
-   
+    
 
     class Box2d {
     public:
@@ -5006,9 +5083,9 @@ namespace GEO {
             target.xy_max[c] = std::max(B1.xy_max[c], B2.xy_max[c]);
         }
     }
+
     
-   
-    
+
     template <class FT> vecng<3,FT> transform_vector(
         const vecng<3,FT>& v,
         const Matrix<4,FT>& m
@@ -5024,10 +5101,10 @@ namespace GEO {
                 result[i] += v[j] * m(j,i) ;
             }
         }
-        
+
         return vecng<3,FT>(
             result[0], result[1], result[2]
-        ) ; 
+        ) ;
     }
 
     template <class FT> vecng<3,FT> transform_point(
@@ -5036,7 +5113,7 @@ namespace GEO {
     ){
         index_t i,j ;
         FT result[4] ;
-        
+
         for(i=0; i<4; i++) {
             result[i] = 0 ;
         }
@@ -5046,22 +5123,22 @@ namespace GEO {
             }
             result[i] += m(3,i);
         }
-    
+
         return vecng<3,FT>(
             result[0] / result[3],
             result[1] / result[3],
-            result[2] / result[3] 
-        ) ; 
+            result[2] / result[3]
+        ) ;
     }
 
 
     template <class FT> vecng<3,FT> transform_point(
-        const Matrix<4,FT>& m,        
+        const Matrix<4,FT>& m,
         const vecng<3,FT>& v
     ){
         index_t i,j ;
         FT result[4] ;
-        
+
         for(i=0; i<4; i++) {
             result[i] = 0 ;
         }
@@ -5071,32 +5148,32 @@ namespace GEO {
             }
             result[i] += m(i,3);
         }
-    
+
         return vecng<3,FT>(
             result[0] / result[3],
             result[1] / result[3],
-            result[2] / result[3] 
-        ) ; 
+            result[2] / result[3]
+        ) ;
     }
-    
+
     template <class FT> vecng<4,FT> transform_vector(
         const vecng<4,FT>& v,
         const Matrix<4,FT>& m
     ) {
         index_t i,j ;
         FT res[4] = {FT(0), FT(0), FT(0), FT(0)};
-        
+
         for(i=0; i<4; i++) {
             for(j=0; j<4; j++) {
                 res[i] += v[j] * m(j,i) ;
             }
         }
-    
-        return vecng<4,FT>(res[0], res[1], res[2], res[3]) ; 
+
+        return vecng<4,FT>(res[0], res[1], res[2], res[3]) ;
     }
 
     
-    
+
     inline mat4 create_translation_matrix(const vec3& T) {
         mat4 result;
         result.load_identity();
@@ -5105,33 +5182,32 @@ namespace GEO {
         result(3,2) = T.z;
         return result;
     }
-    
+
     inline mat4 create_scaling_matrix(double s) {
         mat4 result;
         result.load_identity();
         result(0,0) = s;
         result(1,1) = s;
-        result(2,2) = s;        
+        result(2,2) = s;
         return result;
     }
-    
+
     
 
     struct Ray {
-	Ray(vec3 O, vec3 D) : origin(O), direction(D) {
-	}
-	Ray() {
-	}
-	vec3 origin;
-	vec3 direction;
+        Ray(vec3 O, vec3 D) : origin(O), direction(D) {
+        }
+        Ray() {
+        }
+        vec3 origin;
+        vec3 direction;
     };
 
-            
     
+
 }
 
 #endif
-
 
 /******* extracted from ../numerics/PCK.h *******/
 
@@ -5154,29 +5230,29 @@ namespace GEO {
 
     namespace PCK {
 
-        
+
 #ifdef PCK_STATS
         class GEOGRAM_API PredicateStats {
         public:
-            PredicateStats(const char* name);
-            void log_invoke() {
-                ++invoke_count_;
-            }
-            void log_exact() {
-                ++exact_count_;
-            }
-            void log_SOS() {
-                ++SOS_count_;
-            }
-            void show_stats();
-            static void show_all_stats();
+        PredicateStats(const char* name);
+        void log_invoke() {
+            ++invoke_count_;
+        }
+        void log_exact() {
+            ++exact_count_;
+        }
+        void log_SOS() {
+            ++SOS_count_;
+        }
+        void show_stats();
+        static void show_all_stats();
         private:
-            static PredicateStats* first_;
-            PredicateStats* next_;
-            const char* name_;
-            std::atomic<Numeric::int64> invoke_count_;
-            std::atomic<Numeric::int64> exact_count_;
-            std::atomic<Numeric::int64> SOS_count_;
+        static PredicateStats* first_;
+        PredicateStats* next_;
+        const char* name_;
+        std::atomic<Numeric::int64> invoke_count_;
+        std::atomic<Numeric::int64> exact_count_;
+        std::atomic<Numeric::int64> SOS_count_;
         };
 #else
         class PredicateStats {
@@ -5197,7 +5273,7 @@ namespace GEO {
         };
 #endif
 
-        
+
 #define SOS_result(x) [&]()->Sign { return Sign(x); }
 
         template <
@@ -5265,12 +5341,12 @@ namespace GEO {
 
     namespace PCK {
 
-	enum SOSMode { SOS_ADDRESS, SOS_LEXICO };
+        enum SOSMode { SOS_ADDRESS, SOS_LEXICO };
 
-	void GEOGRAM_API set_SOS_mode(SOSMode m);
+        void GEOGRAM_API set_SOS_mode(SOSMode m);
 
-	SOSMode GEOGRAM_API get_SOS_mode();
-	
+        SOSMode GEOGRAM_API get_SOS_mode();
+
         Sign GEOGRAM_API side1_SOS(
             const double* p0, const double* p1,
             const double* q0,
@@ -5284,20 +5360,20 @@ namespace GEO {
         );
 
         Sign GEOGRAM_API side3_SOS(
-            const double* p0, const double* p1, 
+            const double* p0, const double* p1,
             const double* p2, const double* p3,
             const double* q0, const double* q1, const double* q2,
             coord_index_t DIM
         );
 
         Sign GEOGRAM_API side3_3dlifted_SOS(
-            const double* p0, const double* p1, 
+            const double* p0, const double* p1,
             const double* p2, const double* p3,
             double h0, double h1, double h2, double h3,
             const double* q0, const double* q1, const double* q2,
-	    bool SOS=true
+            bool SOS=true
         );
-        
+
         Sign GEOGRAM_API side4_SOS(
             const double* p0,
             const double* p1, const double* p2,
@@ -5315,42 +5391,42 @@ namespace GEO {
         );
 
         Sign GEOGRAM_API side4_3d_SOS(
-            const double* p0, const double* p1, 
+            const double* p0, const double* p1,
             const double* p2, const double* p3, const double* p4
         );
-       
-         Sign GEOGRAM_API in_sphere_3d_SOS(
-            const double* p0, const double* p1, 
+
+        Sign GEOGRAM_API in_sphere_3d_SOS(
+            const double* p0, const double* p1,
             const double* p2, const double* p3,
             const double* p4
-         );
+        );
 
 
-         Sign GEOGRAM_API in_circle_2d_SOS(
-             const double* p0, const double* p1, const double* p2,
-             const double* p3
-         );
+        Sign GEOGRAM_API in_circle_2d_SOS(
+            const double* p0, const double* p1, const double* p2,
+            const double* p3
+        );
 
-	 
-         Sign GEOGRAM_API in_circle_3d_SOS(
-             const double* p0, const double* p1, const double* p2,
-             const double* p3
-         );
+
+        Sign GEOGRAM_API in_circle_3d_SOS(
+            const double* p0, const double* p1, const double* p2,
+            const double* p3
+        );
 
 
         Sign GEOGRAM_API in_circle_3dlifted_SOS(
             const double* p0, const double* p1, const double* p2,
             const double* p3,
             double h0, double h1, double h2, double h3,
-	    bool SOS=true
+            bool SOS=true
         );
-        
+
         Sign GEOGRAM_API orient_2d(
             const double* p0, const double* p1, const double* p2
         );
 
 
-#ifndef GEOGRAM_PSM        
+#ifndef GEOGRAM_PSM
         inline Sign orient_2d(
             const vec2& p0, const vec2& p1, const vec2& p2
         ) {
@@ -5360,11 +5436,11 @@ namespace GEO {
 
         Sign GEOGRAM_API orient_2dlifted_SOS(
             const double* p0, const double* p1,
-            const double* p2, const double* p3, 
+            const double* p2, const double* p3,
             double h0, double h1, double h2, double h3
         );
-	
-        
+
+
         Sign GEOGRAM_API orient_3d(
             const double* p0, const double* p1,
             const double* p2, const double* p3
@@ -5379,7 +5455,7 @@ namespace GEO {
             return orient_3d(p0.data(),p1.data(),p2.data(),p3.data());
         }
 #endif
-        
+
         Sign GEOGRAM_API orient_3dlifted(
             const double* p0, const double* p1,
             const double* p2, const double* p3, const double* p4,
@@ -5394,89 +5470,106 @@ namespace GEO {
         );
 
 
-	Sign GEOGRAM_API det_3d(
-	    const double* p0, const double* p1, const double* p2
-	);
+        Sign GEOGRAM_API det_3d(
+            const double* p0, const double* p1, const double* p2
+        );
 
-	Sign GEOGRAM_API det_4d(
-	    const double* p0, const double* p1,
-	    const double* p2, const double* p3
-	);
+#ifndef GEOGRAM_PSM
+        inline Sign det_3d(
+            const vec3& p0, const vec3& p1, const vec3& p2
+        ) {
+	    return det_3d(p0.data(), p1.data(), p2.data());
+	}
+#endif
 
-	Sign GEOGRAM_API det_compare_4d(
-	    const double* p0, const double* p1,
-	    const double* p2, const double* p3,
-	    const double* p4
-	);
-	
-	bool GEOGRAM_API aligned_3d(
-	    const double* p0, const double* p1, const double* p2
-	);
-	
-	Sign GEOGRAM_API dot_3d(
-	    const double* p0, const double* p1, const double* p2
-	);
+        Sign GEOGRAM_API det_4d(
+            const double* p0, const double* p1,
+            const double* p2, const double* p3
+        );
+
+#ifndef GEOGRAM_PSM
+        inline Sign det_4d(
+            const vec4& p0, const vec4& p1,
+            const vec4& p2, const vec4& p3
+        ) {
+	    return det_4d(p0.data(), p1.data(), p2.data(), p3.data());
+	}
+#endif
+
+        Sign GEOGRAM_API det_compare_4d(
+            const double* p0, const double* p1,
+            const double* p2, const double* p3,
+            const double* p4
+        );
+
+        bool GEOGRAM_API aligned_3d(
+            const double* p0, const double* p1, const double* p2
+        );
+
+        Sign GEOGRAM_API dot_3d(
+            const double* p0, const double* p1, const double* p2
+        );
 
 #ifndef GEOGRAM_PSM
 
-	inline bool aligned_3d(
-	    const vec3& p0, const vec3& p1, const vec3& p2
-	) {
+        inline bool aligned_3d(
+            const vec3& p0, const vec3& p1, const vec3& p2
+        ) {
             return aligned_3d(p0.data(), p1.data(), p2.data());
         }
-        
-	inline Sign dot_3d(
-	    const vec3& p0, const vec3& p1, const vec3& p2
-	) {
+
+        inline Sign dot_3d(
+            const vec3& p0, const vec3& p1, const vec3& p2
+        ) {
             return dot_3d(p0.data(), p1.data(), p2.data());
         }
 #endif
-	
-	Sign GEOGRAM_API dot_compare_3d(
-	    const double* v0, const double* v1, const double* v2
-	);
-	
-	bool points_are_identical_2d(
-	    const double* p1,
-	    const double* p2
-	);
-    
-	bool GEOGRAM_API points_are_identical_3d(
-	    const double* p1,
-	    const double* p2
-	);
 
-	bool GEOGRAM_API points_are_colinear_3d(
-	    const double* p1,
-	    const double* p2,
-	    const double* p3
+        Sign GEOGRAM_API dot_compare_3d(
+            const double* v0, const double* v1, const double* v2
         );
 
-	inline Sign orient_3d_inexact(
-	    const double* p0, const double* p1,
-	    const double* p2, const double* p3
-	) {
-	    double a11 = p1[0] - p0[0] ;
-	    double a12 = p1[1] - p0[1] ;
-	    double a13 = p1[2] - p0[2] ;
-	    
-	    double a21 = p2[0] - p0[0] ;
-	    double a22 = p2[1] - p0[1] ;
-	    double a23 = p2[2] - p0[2] ;
-	    
-	    double a31 = p3[0] - p0[0] ;
-	    double a32 = p3[1] - p0[1] ;
-	    double a33 = p3[2] - p0[2] ;
-	    
-	    double Delta = det3x3(
-		a11,a12,a13,
-		a21,a22,a23,
-		a31,a32,a33
-	    );
+        bool points_are_identical_2d(
+            const double* p1,
+            const double* p2
+        );
 
-	    return geo_sgn(Delta);
-	}
-	
+        bool GEOGRAM_API points_are_identical_3d(
+            const double* p1,
+            const double* p2
+        );
+
+        bool GEOGRAM_API points_are_colinear_3d(
+            const double* p1,
+            const double* p2,
+            const double* p3
+        );
+
+        inline Sign orient_3d_inexact(
+            const double* p0, const double* p1,
+            const double* p2, const double* p3
+        ) {
+            double a11 = p1[0] - p0[0] ;
+            double a12 = p1[1] - p0[1] ;
+            double a13 = p1[2] - p0[2] ;
+
+            double a21 = p2[0] - p0[0] ;
+            double a22 = p2[1] - p0[1] ;
+            double a23 = p2[2] - p0[2] ;
+
+            double a31 = p3[0] - p0[0] ;
+            double a32 = p3[1] - p0[1] ;
+            double a33 = p3[2] - p0[2] ;
+
+            double Delta = det3x3(
+                a11,a12,a13,
+                a21,a22,a23,
+                a31,a32,a33
+            );
+
+            return geo_sgn(Delta);
+        }
+
         void GEOGRAM_API show_stats();
 
         void GEOGRAM_API initialize();
@@ -5486,7 +5579,6 @@ namespace GEO {
 }
 
 #endif
-
 
 /******* extracted from ../numerics/multi_precision.h *******/
 
@@ -5578,482 +5670,482 @@ namespace GEO {
 
     class GEOGRAM_API expansion {
     public:
-        index_t length() const {
-            return length_;
-        }
+    index_t length() const {
+        return length_;
+    }
 
-        index_t capacity() const {
-            return capacity_;
-        }
+    index_t capacity() const {
+        return capacity_;
+    }
 
-        void set_length(index_t new_length) {
-            geo_debug_assert(new_length <= capacity());
-            length_ = new_length;
-        }
+    void set_length(index_t new_length) {
+        geo_debug_assert(new_length <= capacity());
+        length_ = new_length;
+    }
 
-        const double& operator[] (index_t i) const {
-            // Note: we allocate capacity+1 storage
-            // systematically, since basic functions
-            // may access one additional value (without
-            // using it)
-            geo_debug_assert(i <= capacity_);
-            return x_[i];
-        }
+    const double& operator[] (index_t i) const {
+        // Note: we allocate capacity+1 storage
+        // systematically, since basic functions
+        // may access one additional value (without
+        // using it)
+        geo_debug_assert(i <= capacity_);
+        return x_[i];
+    }
 
-        double& operator[] (index_t i) {
-            // Note: we allocate capacity+1 storage
-            // systematically, since basic functions
-            // may access one additional value (without
-            // using it)
-            geo_debug_assert(i <= capacity_);
-            return x_[i];
-        }
+    double& operator[] (index_t i) {
+        // Note: we allocate capacity+1 storage
+        // systematically, since basic functions
+        // may access one additional value (without
+        // using it)
+        geo_debug_assert(i <= capacity_);
+        return x_[i];
+    }
 
-        double* data() {
-            return x_;
-        }
+    double* data() {
+        return x_;
+    }
 
-        const double* data() const {
-            return x_;
-        }
+    const double* data() const {
+        return x_;
+    }
 
-        static size_t bytes(index_t capa) {
-            // --> 2*sizeof(double) because x_ is declared of size [2]
-            // to avoid compiler's warning.
-            // --> capa+1 to have an additional 'sentry' at the end
-            // because fast_expansion_sum_zeroelim() may access
-            // an entry past the end (without using it).
-            return
-                sizeof(expansion) - 2 * sizeof(double) +
-                (capa + 1) * sizeof(double);
-        }
+    static size_t bytes(index_t capa) {
+        // --> 2*sizeof(double) because x_ is declared of size [2]
+        // to avoid compiler's warning.
+        // --> capa+1 to have an additional 'sentry' at the end
+        // because fast_expansion_sum_zeroelim() may access
+        // an entry past the end (without using it).
+        return
+            sizeof(expansion) - 2 * sizeof(double) +
+            (capa + 1) * sizeof(double);
+    }
 
-        static size_t bytes_on_stack(index_t capa) {
+    static size_t bytes_on_stack(index_t capa) {
 #ifndef GEO_HAS_BIG_STACK
-            // Note: standard predicates need at least 512, hence the min.
-            // index_t(MAX_CAPACITY_ON_STACK) is necessary, else with
-            // MAX_CAPACITY_ON_STACK alone the compiler tries to generate a
-            // reference to NOT_IN_LIST resulting in a link error.
-            // (weird, even with constexpr, I do not understand...)
-            // Probably when the function excepts a *reference*
-            geo_debug_assert(
-                capa <= std::max(index_t(MAX_CAPACITY_ON_STACK),index_t(512))
-            );
+        // Note: standard predicates need at least 512, hence the min.
+        // index_t(MAX_CAPACITY_ON_STACK) is necessary, else with
+        // MAX_CAPACITY_ON_STACK alone the compiler tries to generate a
+        // reference to NOT_IN_LIST resulting in a link error.
+        // (weird, even with constexpr, I do not understand...)
+        // Probably when the function excepts a *reference*
+        geo_debug_assert(
+            capa <= std::max(index_t(MAX_CAPACITY_ON_STACK),index_t(512))
+        );
 #endif
-            return bytes(capa);
-        }
-        
-        expansion(index_t capa) :
-            length_(0),
-            capacity_(capa) {
-        }
+        return bytes(capa);
+    }
+
+    expansion(index_t capa) :
+    length_(0),
+    capacity_(capa) {
+    }
 
 #ifdef CPPCHECK
-        // cppcheck does not understand that the result
-        // of alloca() is passed to the placement syntax
-        // of operator new.
-    expansion& new_expansion_on_stack(index_t capa);         
+    // cppcheck does not understand that the result
+    // of alloca() is passed to the placement syntax
+    // of operator new.
+    expansion& new_expansion_on_stack(index_t capa);
 #else
-#define new_expansion_on_stack(capa)                           \
+#define new_expansion_on_stack(capa)                                    \
     (new (alloca(expansion::bytes_on_stack(capa)))expansion(capa))
 #endif
 
-        static expansion* new_expansion_on_heap(index_t capa);
+    static expansion* new_expansion_on_heap(index_t capa);
 
-        static void delete_expansion_on_heap(expansion* e);
+    static void delete_expansion_on_heap(expansion* e);
 
-        // ========================== Initialization from doubles
+    // ========================== Initialization from doubles
 
-	expansion& assign(double a) {
-	    set_length(1);
-	    x_[0] = a;
-	    return *this;
-	}
+    expansion& assign(double a) {
+        set_length(1);
+        x_[0] = a;
+        return *this;
+    }
 
-	expansion& assign(const expansion& rhs) {
-            geo_debug_assert(capacity() >= rhs.length());
-	    set_length(rhs.length());
-            for(index_t i=0; i<rhs.length(); ++i) {
-                x_[i] = rhs.x_[i];
-            }
-	    return *this;
-	}
-
-        expansion& assign_abs(const expansion& rhs) {
-            assign(rhs);
-            if(sign() == NEGATIVE) {
-                negate();
-            }
-            return *this;
+    expansion& assign(const expansion& rhs) {
+        geo_debug_assert(capacity() >= rhs.length());
+        set_length(rhs.length());
+        for(index_t i=0; i<rhs.length(); ++i) {
+            x_[i] = rhs.x_[i];
         }
-        
-        static index_t sum_capacity(double a, double b) {
-            geo_argused(a);
-            geo_argused(b);
-            return 2;
+        return *this;
+    }
+
+    expansion& assign_abs(const expansion& rhs) {
+        assign(rhs);
+        if(sign() == NEGATIVE) {
+            negate();
         }
+        return *this;
+    }
 
-        expansion& assign_sum(double a, double b) {
-            set_length(2);
-            two_sum(a, b, x_[1], x_[0]);
-            return *this;
-        }
+    static index_t sum_capacity(double a, double b) {
+        geo_argused(a);
+        geo_argused(b);
+        return 2;
+    }
 
-        static index_t diff_capacity(double a, double b) {
-            geo_argused(a);
-            geo_argused(b);
-            return 2;
-        }
+    expansion& assign_sum(double a, double b) {
+        set_length(2);
+        two_sum(a, b, x_[1], x_[0]);
+        return *this;
+    }
 
-        expansion& assign_diff(double a, double b) {
-            set_length(2);
-            two_diff(a, b, x_[1], x_[0]);
-            return *this;
-        }
+    static index_t diff_capacity(double a, double b) {
+        geo_argused(a);
+        geo_argused(b);
+        return 2;
+    }
 
-        static index_t product_capacity(double a, double b) {
-            geo_argused(a);
-            geo_argused(b);
-            return 2;
-        }
+    expansion& assign_diff(double a, double b) {
+        set_length(2);
+        two_diff(a, b, x_[1], x_[0]);
+        return *this;
+    }
 
-        expansion& assign_product(double a, double b) {
-            set_length(2);
-            two_product(a, b, x_[1], x_[0]);
-            return *this;
-        }
+    static index_t product_capacity(double a, double b) {
+        geo_argused(a);
+        geo_argused(b);
+        return 2;
+    }
 
-        static index_t square_capacity(double a) {
-            geo_argused(a);
-            return 2;
-        }
+    expansion& assign_product(double a, double b) {
+        set_length(2);
+        two_product(a, b, x_[1], x_[0]);
+        return *this;
+    }
 
-        expansion& assign_square(double a) {
-            set_length(2);
-            square(a, x_[1], x_[0]);
-            return *this;
-        }
+    static index_t square_capacity(double a) {
+        geo_argused(a);
+        return 2;
+    }
 
-        // ====== Initialization from expansion and double
+    expansion& assign_square(double a) {
+        set_length(2);
+        square(a, x_[1], x_[0]);
+        return *this;
+    }
 
-        static index_t sum_capacity(const expansion& a, double b) {
-            geo_argused(b);
-            return a.length() + 1;
-        }
+    // ====== Initialization from expansion and double
 
-        expansion& assign_sum(const expansion& a, double b);
+    static index_t sum_capacity(const expansion& a, double b) {
+        geo_argused(b);
+        return a.length() + 1;
+    }
 
-        static index_t diff_capacity(const expansion& a, double b) {
-            geo_argused(b);
-            return a.length() + 1;
-        }
+    expansion& assign_sum(const expansion& a, double b);
 
-        expansion& assign_diff(const expansion& a, double b);
+    static index_t diff_capacity(const expansion& a, double b) {
+        geo_argused(b);
+        return a.length() + 1;
+    }
 
-        static index_t product_capacity(const expansion& a, double b) {
-            geo_argused(b);
-            // TODO: implement special case where the double argument
-            // is a power of two.
-            return a.length() * 2;
-        }
+    expansion& assign_diff(const expansion& a, double b);
 
-        expansion& assign_product(const expansion& a, double b);
+    static index_t product_capacity(const expansion& a, double b) {
+        geo_argused(b);
+        // TODO: implement special case where the double argument
+        // is a power of two.
+        return a.length() * 2;
+    }
 
-        // ========================== Initialization from expansions
+    expansion& assign_product(const expansion& a, double b);
 
-        static index_t sum_capacity(const expansion& a, const expansion& b) {
-            return a.length() + b.length();
-        }
+    // ========================== Initialization from expansions
 
-        expansion& assign_sum(const expansion& a, const expansion& b);
+    static index_t sum_capacity(const expansion& a, const expansion& b) {
+        return a.length() + b.length();
+    }
 
-        static index_t sum_capacity(
-            const expansion& a, const expansion& b, const expansion& c
-        ) {
-            return a.length() + b.length() + c.length();
-        }
+    expansion& assign_sum(const expansion& a, const expansion& b);
 
-        expansion& assign_sum(
-            const expansion& a, const expansion& b, const expansion& c
+    static index_t sum_capacity(
+        const expansion& a, const expansion& b, const expansion& c
+    ) {
+        return a.length() + b.length() + c.length();
+    }
+
+    expansion& assign_sum(
+        const expansion& a, const expansion& b, const expansion& c
+    );
+
+    static index_t sum_capacity(
+        const expansion& a, const expansion& b,
+        const expansion& c, const expansion& d
+    ) {
+        return a.length() + b.length() + c.length() + d.length();
+    }
+
+    expansion& assign_sum(
+        const expansion& a, const expansion& b,
+        const expansion& c, const expansion& d
+    );
+
+    static index_t diff_capacity(const expansion& a, const expansion& b) {
+        return a.length() + b.length();
+    }
+
+    expansion& assign_diff(const expansion& a, const expansion& b);
+
+    static index_t product_capacity(
+        const expansion& a, const expansion& b
+    ) {
+        return a.length() * b.length() * 2;
+    }
+
+    expansion& assign_product(const expansion& a, const expansion& b);
+
+    static index_t product_capacity(
+        const expansion& a, const expansion& b, const expansion& c
+    ) {
+        return a.length() * b.length() * c.length() * 4;
+    }
+
+    expansion& assign_product(
+        const expansion& a, const expansion& b, const expansion& c
+    );
+
+    static index_t square_capacity(const expansion& a) {
+        if(a.length() == 2) {
+            return 6;
+        }                                  // see two_square()
+        return a.length() * a.length() * 2;
+    }
+
+    expansion& assign_square(const expansion& a);
+
+    // ====== Determinants =============================
+
+    static index_t det2x2_capacity(
+        const expansion& a11, const expansion& a12,
+        const expansion& a21, const expansion& a22
+    ) {
+        return
+            product_capacity(a11, a22) +
+            product_capacity(a21, a12);
+    }
+
+    expansion& assign_det2x2(
+        const expansion& a11, const expansion& a12,
+        const expansion& a21, const expansion& a22
+    );
+
+    static index_t det3x3_capacity(
+        const expansion& a11, const expansion& a12, const expansion& a13,
+        const expansion& a21, const expansion& a22, const expansion& a23,
+        const expansion& a31, const expansion& a32, const expansion& a33
+    ) {
+        // Development w.r.t. first row
+        index_t c11_capa = det2x2_capacity(a22, a23, a32, a33);
+        index_t c12_capa = det2x2_capacity(a21, a23, a31, a33);
+        index_t c13_capa = det2x2_capacity(a21, a22, a31, a32);
+        return 2 * (
+            a11.length() * c11_capa +
+            a12.length() * c12_capa +
+            a13.length() * c13_capa
         );
+    }
 
-        static index_t sum_capacity(
-            const expansion& a, const expansion& b,
-            const expansion& c, const expansion& d
-        ) {
-            return a.length() + b.length() + c.length() + d.length();
+    expansion& assign_det3x3(
+        const expansion& a11, const expansion& a12, const expansion& a13,
+        const expansion& a21, const expansion& a22, const expansion& a23,
+        const expansion& a31, const expansion& a32, const expansion& a33
+    );
+
+    static index_t det_111_2x3_capacity(
+        const expansion& a21, const expansion& a22, const expansion& a23,
+        const expansion& a31, const expansion& a32, const expansion& a33
+    ) {
+        return
+            det2x2_capacity(a22, a23, a32, a33) +
+            det2x2_capacity(a23, a21, a33, a31) +
+            det2x2_capacity(a21, a22, a31, a32);
+    }
+
+    expansion& assign_det_111_2x3(
+        const expansion& a21, const expansion& a22, const expansion& a23,
+        const expansion& a31, const expansion& a32, const expansion& a33
+    );
+
+    // ======= Geometry-specific initializations =======
+
+    static index_t sq_dist_capacity(coord_index_t dim) {
+        return index_t(dim) * 6;
+    }
+
+    expansion& assign_sq_dist(
+        const double* p1, const double* p2, coord_index_t dim
+    );
+
+    static index_t dot_at_capacity(coord_index_t dim) {
+        return index_t(dim) * 8;
+    }
+
+    expansion& assign_dot_at(
+        const double* p1, const double* p2, const double* p0,
+        coord_index_t dim
+    );
+
+
+    static index_t length2_capacity(
+        const expansion& x, const expansion& y, const expansion& z
+    ) {
+        return square_capacity(x) + square_capacity(y) + square_capacity(z);
+    }
+
+    expansion& assign_length2(
+        const expansion& x, const expansion& y, const expansion& z
+    );
+
+    // =============== some general purpose functions =========
+
+    static void initialize();
+
+    expansion& negate() {
+        for(index_t i = 0; i < length_; ++i) {
+            x_[i] = -x_[i];
         }
+        return *this;
+    }
 
-        expansion& assign_sum(
-            const expansion& a, const expansion& b,
-            const expansion& c, const expansion& d
-        );
-
-        static index_t diff_capacity(const expansion& a, const expansion& b) {
-            return a.length() + b.length();
+    expansion& scale_fast(double s) {
+        // TODO: debug assert is_power_of_two(s)
+        for(index_t i = 0; i < length_; ++i) {
+            x_[i] *= s;
         }
+        return *this;
+    }
 
-        expansion& assign_diff(const expansion& a, const expansion& b);
-
-        static index_t product_capacity(
-            const expansion& a, const expansion& b
-        ) {
-            return a.length() * b.length() * 2;
+    double estimate() const {
+        double result = 0.0;
+        for(index_t i = 0; i < length(); ++i) {
+            result += x_[i];
         }
+        return result;
+    }
 
-        expansion& assign_product(const expansion& a, const expansion& b);
-
-        static index_t product_capacity(
-            const expansion& a, const expansion& b, const expansion& c
-        ) {
-            return a.length() * b.length() * c.length() * 4;
+    Sign sign() const {
+        if(length() == 0) {
+            return ZERO;
         }
+        return geo_sgn(x_[length() - 1]);
+    }
 
-        expansion& assign_product(
-            const expansion& a, const expansion& b, const expansion& c
-        );
+    bool is_same_as(const expansion& rhs) const;
 
-        static index_t square_capacity(const expansion& a) {
-            if(a.length() == 2) {
-                return 6;
-            }                                  // see two_square()
-            return a.length() * a.length() * 2;
+    bool is_same_as(double rhs) const;
+
+
+    Sign compare(const expansion& rhs) const;
+
+    Sign compare(double rhs) const;
+
+    bool equals(const expansion& rhs) const {
+        return (compare(rhs) == ZERO);
+    }
+
+    bool equals(double rhs) const {
+        return (compare(rhs) == ZERO);
+    }
+
+    std::ostream& show(std::ostream& out) const {
+        out << "expansion[" << length() << "] = [";
+        for(index_t i=0; i<length(); ++i) {
+            out << (*this)[i] << " ";
         }
+        out << "]";
+        return out;
+    }
 
-        expansion& assign_square(const expansion& a);
+    std::string to_string() const {
+        std::ostringstream out;
+        show(out);
+        return out.str();
+    }
 
-        // ====== Determinants =============================
+    void optimize();
 
-        static index_t det2x2_capacity(
-            const expansion& a11, const expansion& a12,
-            const expansion& a21, const expansion& a22
-        ) {
-            return
-                product_capacity(a11, a22) +
-                product_capacity(a21, a12);
-        }
+    static void show_all_stats();
 
-        expansion& assign_det2x2(
-            const expansion& a11, const expansion& a12,
-            const expansion& a21, const expansion& a22
-        );
-
-        static index_t det3x3_capacity(
-            const expansion& a11, const expansion& a12, const expansion& a13,
-            const expansion& a21, const expansion& a22, const expansion& a23,
-            const expansion& a31, const expansion& a32, const expansion& a33
-        ) {
-            // Development w.r.t. first row
-            index_t c11_capa = det2x2_capacity(a22, a23, a32, a33);
-            index_t c12_capa = det2x2_capacity(a21, a23, a31, a33);
-            index_t c13_capa = det2x2_capacity(a21, a22, a31, a32);
-            return 2 * (
-                a11.length() * c11_capa +
-                a12.length() * c12_capa +
-                a13.length() * c13_capa
-            );
-        }
-
-        expansion& assign_det3x3(
-            const expansion& a11, const expansion& a12, const expansion& a13,
-            const expansion& a21, const expansion& a22, const expansion& a23,
-            const expansion& a31, const expansion& a32, const expansion& a33
-        );
-
-        static index_t det_111_2x3_capacity(
-            const expansion& a21, const expansion& a22, const expansion& a23,
-            const expansion& a31, const expansion& a32, const expansion& a33
-        ) {
-            return
-                det2x2_capacity(a22, a23, a32, a33) +
-                det2x2_capacity(a23, a21, a33, a31) +
-                det2x2_capacity(a21, a22, a31, a32);
-        }
-
-        expansion& assign_det_111_2x3(
-            const expansion& a21, const expansion& a22, const expansion& a23,
-            const expansion& a31, const expansion& a32, const expansion& a33
-        );
-
-        // ======= Geometry-specific initializations =======
-
-        static index_t sq_dist_capacity(coord_index_t dim) {
-            return index_t(dim) * 6;
-        }
-
-        expansion& assign_sq_dist(
-            const double* p1, const double* p2, coord_index_t dim
-        );
-
-        static index_t dot_at_capacity(coord_index_t dim) {
-            return index_t(dim) * 8;
-        }
-
-        expansion& assign_dot_at(
-            const double* p1, const double* p2, const double* p0,
-            coord_index_t dim
-        );
-
-
-        static index_t length2_capacity(
-            const expansion& x, const expansion& y, const expansion& z
-        ) {
-            return square_capacity(x) + square_capacity(y) + square_capacity(z);
-        }
-
-        expansion& assign_length2(
-            const expansion& x, const expansion& y, const expansion& z
-        );
-        
-        // =============== some general purpose functions =========
-
-        static void initialize();
-
-        expansion& negate() {
-            for(index_t i = 0; i < length_; ++i) {
-                x_[i] = -x_[i];
-            }
-            return *this;
-        }
-
-        expansion& scale_fast(double s) {
-            // TODO: debug assert is_power_of_two(s)
-            for(index_t i = 0; i < length_; ++i) {
-                x_[i] *= s;
-            }
-            return *this;
-        }
-
-        double estimate() const {
-            double result = 0.0;
-            for(index_t i = 0; i < length(); ++i) {
-                result += x_[i];
-            }
-            return result;
-        }
-
-        Sign sign() const {
-            if(length() == 0) {
-                return ZERO;
-            }
-            return geo_sgn(x_[length() - 1]);
-        }
-
-        bool is_same_as(const expansion& rhs) const;
-
-        bool is_same_as(double rhs) const;
-
-
-        Sign compare(const expansion& rhs) const;
-
-        Sign compare(double rhs) const;
-
-        bool equals(const expansion& rhs) const {
-            return (compare(rhs) == ZERO);
-        }
-
-        bool equals(double rhs) const {
-            return (compare(rhs) == ZERO);            
-        }
-        
-        std::ostream& show(std::ostream& out) const {
-            out << "expansion[" << length() << "] = [";
-            for(index_t i=0; i<length(); ++i) {
-                out << (*this)[i] << " ";
-            }
-            out << "]";
-            return out;
-        }
-
-        std::string to_string() const {
-            std::ostringstream out;
-            show(out);
-            return out.str();
-        }
-
-        void optimize();
-
-        static void show_all_stats();
-        
     protected:
-        static index_t sub_product_capacity(
-            index_t a_length, index_t b_length
-        ) {
-            return a_length * b_length * 2;
-        }
+    static index_t sub_product_capacity(
+        index_t a_length, index_t b_length
+    ) {
+        return a_length * b_length * 2;
+    }
 
-        expansion& assign_sub_product(
-            const double* a, index_t a_length, const expansion& b
-        );
+    expansion& assign_sub_product(
+        const double* a, index_t a_length, const expansion& b
+    );
 
-        expansion(const expansion& rhs) = delete;
+    expansion(const expansion& rhs) = delete;
 
-        expansion& operator= (const expansion& rhs) = delete;
+    expansion& operator= (const expansion& rhs) = delete;
 
     private:
 
 #ifdef GEO_OS_APPLE
-        static constexpr index_t MAX_CAPACITY_ON_STACK = 256;
-#else    
-        static constexpr index_t MAX_CAPACITY_ON_STACK = 1024;
+    static constexpr index_t MAX_CAPACITY_ON_STACK = 256;
+#else
+    static constexpr index_t MAX_CAPACITY_ON_STACK = 1024;
 #endif
-        index_t length_;
-        index_t capacity_;
-        double x_[2];  // x_ is in fact of size [capacity_]
+    index_t length_;
+    index_t capacity_;
+    double x_[2];  // x_ is in fact of size [capacity_]
 
-        friend class expansion_nt;
+    friend class expansion_nt;
     };
 
     // =============== arithmetic operations ===========================
 
-#define expansion_create(a)	      \
+#define expansion_create(a)                     \
     new_expansion_on_stack(1)->assign(a)
 
 
-#define expansion_abs(e)	      \
+#define expansion_abs(e)                                \
     new_expansion_on_stack(e.length())->assign_abs(e)
-    
-#define expansion_sum(a, b)            \
-    new_expansion_on_stack(           \
-        expansion::sum_capacity(a, b)   \
+
+#define expansion_sum(a, b)                     \
+    new_expansion_on_stack(                     \
+        expansion::sum_capacity(a, b)           \
     )->assign_sum(a, b)
 
-#define expansion_sum3(a, b, c)          \
-    new_expansion_on_stack(            \
-        expansion::sum_capacity(a, b, c) \
+#define expansion_sum3(a, b, c)                 \
+    new_expansion_on_stack(                     \
+        expansion::sum_capacity(a, b, c)        \
     )->assign_sum(a, b, c)
 
 
-#define expansion_sum4(a, b, c, d)          \
-    new_expansion_on_stack(              \
-        expansion::sum_capacity(a, b, c, d) \
+#define expansion_sum4(a, b, c, d)              \
+    new_expansion_on_stack(                     \
+        expansion::sum_capacity(a, b, c, d)     \
     )->assign_sum(a, b, c, d)
 
-#define expansion_diff(a, b)             \
-    new_expansion_on_stack(             \
-        expansion::diff_capacity(a, b)   \
+#define expansion_diff(a, b)                    \
+    new_expansion_on_stack(                     \
+        expansion::diff_capacity(a, b)          \
     )->assign_diff(a, b)
 
-#define expansion_product(a, b)            \
-    new_expansion_on_stack(               \
-        expansion::product_capacity(a, b)  \
+#define expansion_product(a, b)                 \
+    new_expansion_on_stack(                     \
+        expansion::product_capacity(a, b)       \
     )->assign_product(a, b)
 
-#define expansion_product3(a, b, c)           \
-    new_expansion_on_stack(                 \
-        expansion::product_capacity(a, b, c)  \
+#define expansion_product3(a, b, c)             \
+    new_expansion_on_stack(                     \
+        expansion::product_capacity(a, b, c)    \
     )->assign_product(a, b, c)
 
-#define expansion_square(a)             \
-    new_expansion_on_stack(             \
-        expansion::square_capacity(a)   \
+#define expansion_square(a)                     \
+    new_expansion_on_stack(                     \
+        expansion::square_capacity(a)           \
     )->assign_square(a)
 
     // =============== determinants =====================================
 
-#define expansion_det2x2(a11, a12, a21, a22)          \
-    new_expansion_on_stack(                        \
-        expansion::det2x2_capacity(a11, a12, a21, a22) \
+#define expansion_det2x2(a11, a12, a21, a22)            \
+    new_expansion_on_stack(                             \
+        expansion::det2x2_capacity(a11, a12, a21, a22)  \
     )->assign_det2x2(a11, a12, a21, a22)
 
 #define expansion_det3x3(a11, a12, a13, a21, a22, a23, a31, a32, a33)   \
@@ -6061,36 +6153,36 @@ namespace GEO {
         expansion::det3x3_capacity(a11,a12,a13,a21,a22,a23,a31,a32,a33) \
     )->assign_det3x3(a11, a12, a13, a21, a22, a23, a31, a32, a33)
 
-#define expansion_det_111_2x3(a21, a22, a23, a31, a32, a33)           \
-    new_expansion_on_stack(                                      \
-        expansion::det_111_2x3_capacity(a21, a22, a23, a31, a32, a33) \
+#define expansion_det_111_2x3(a21, a22, a23, a31, a32, a33)             \
+    new_expansion_on_stack(                                             \
+        expansion::det_111_2x3_capacity(a21, a22, a23, a31, a32, a33)   \
     )->assign_det_111_2x3(a21, a22, a23, a31, a32, a33)
 
     // =============== geometric functions ==============================
 
-#define expansion_sq_dist(a, b, dim)           \
-    new_expansion_on_stack(                  \
-        expansion::sq_dist_capacity(dim)     \
+#define expansion_sq_dist(a, b, dim)            \
+    new_expansion_on_stack(                     \
+        expansion::sq_dist_capacity(dim)        \
     )->assign_sq_dist(a, b, dim)
 
-#define expansion_dot_at(a, b, c, dim)           \
-    new_expansion_on_stack(                   \
-        expansion::dot_at_capacity(dim)       \
+#define expansion_dot_at(a, b, c, dim)          \
+    new_expansion_on_stack(                     \
+        expansion::dot_at_capacity(dim)         \
     )->assign_dot_at(a, b, c, dim)
 
 
-#define expansion_length2(x,y,z)              \
-    new_expansion_on_stack(                   \
-       expansion::length2_capacity(x,y,z)     \
+#define expansion_length2(x,y,z)                \
+    new_expansion_on_stack(                     \
+        expansion::length2_capacity(x,y,z)      \
     )->assign_length2(x,y,z)
-    
+
     
 
     Sign GEOGRAM_API sign_of_expansion_determinant(
-        const expansion& a00,const expansion& a01,  
+        const expansion& a00,const expansion& a01,
         const expansion& a10,const expansion& a11
     );
-    
+
     Sign GEOGRAM_API sign_of_expansion_determinant(
         const expansion& a00,const expansion& a01,const expansion& a02,
         const expansion& a10,const expansion& a11,const expansion& a12,
@@ -6105,9 +6197,9 @@ namespace GEO {
         const expansion& a20,const expansion& a21,
         const expansion& a22,const expansion& a23,
         const expansion& a30,const expansion& a31,
-        const expansion& a32,const expansion& a33 
+        const expansion& a32,const expansion& a33
     );
-    
+
     
 
     void GEOGRAM_API grow_expansion_zeroelim(
@@ -6116,7 +6208,7 @@ namespace GEO {
 
     void GEOGRAM_API scale_expansion_zeroelim(
         const expansion& e, double b, expansion& h
-    );    
+    );
 
     void GEOGRAM_API fast_expansion_sum_zeroelim(
         const expansion& e, const expansion& f, expansion& h
@@ -6126,12 +6218,11 @@ namespace GEO {
     void GEOGRAM_API fast_expansion_diff_zeroelim(
         const expansion& e, const expansion& f, expansion& h
     );
-    
+
     
 }
 
 #endif
-
 
 /******* extracted from ../numerics/expansion_nt.h *******/
 
@@ -6143,308 +6234,308 @@ namespace GEO {
 namespace GEO {
 
     class expansion_nt;
-    
+
     class GEOGRAM_API expansion_nt {
     public:
 
-         enum Operation {
-             SUM, DIFF, PRODUCT
-         };
-         
-         expansion_nt() : rep_(nullptr) {
-         }
-         
-        explicit expansion_nt(double x) {
-            rep_ = expansion::new_expansion_on_heap(1);
-            rep()[0] = x;
-            rep().set_length(1);
-        }
+    enum Operation {
+        SUM, DIFF, PRODUCT
+    };
 
-        explicit expansion_nt(const expansion& rhs) {
-            rep_ = expansion::new_expansion_on_heap(rhs.length());
-            rep().assign(rhs);
-        }
+    expansion_nt() : rep_(nullptr) {
+    }
 
-        explicit expansion_nt(
-            Operation op, const expansion& x, const expansion& y
-        ) {
-            switch(op) {
-            case SUM:
-                rep_ = expansion::new_expansion_on_heap(
-                    expansion::sum_capacity(x,y)
-                );
-                rep_->assign_sum(x,y);
-                break;
-            case DIFF:
-                rep_ = expansion::new_expansion_on_heap(
-                    expansion::diff_capacity(x,y)
-                );
-                rep_->assign_diff(x,y);
-                break;
-            case PRODUCT:
-                rep_ = expansion::new_expansion_on_heap(
-                    expansion::product_capacity(x,y)
-                );
-                rep_->assign_product(x,y);
-                break;
-            }
-        }
+    explicit expansion_nt(double x) {
+        rep_ = expansion::new_expansion_on_heap(1);
+        rep()[0] = x;
+        rep().set_length(1);
+    }
 
-        explicit expansion_nt(
-            Operation op,
-            const expansion& x, const expansion& y, const expansion& z
-        ) {
-            switch(op) {
-            case SUM:
-                rep_ = expansion::new_expansion_on_heap(
-                    expansion::sum_capacity(x,y,z)
-                );
-                rep_->assign_sum(x,y,z);
-                break;
-            case DIFF:
-                geo_assert_not_reached;
-                break;
-            case PRODUCT:
-                rep_ = expansion::new_expansion_on_heap(
-                    expansion::product_capacity(x,y,z)
-                );
-                rep_->assign_product(x,y,z);
-                break;
-            }
-        }
+    explicit expansion_nt(const expansion& rhs) {
+        rep_ = expansion::new_expansion_on_heap(rhs.length());
+        rep().assign(rhs);
+    }
 
-        explicit expansion_nt(
-            Operation op,
-            const expansion& x, const expansion& y,
-            const expansion& z, const expansion& t
-        ) {
-            switch(op) {
-            case SUM:
-                rep_ = expansion::new_expansion_on_heap(
-                    expansion::sum_capacity(x,y,z,t)
-                );
-                rep_->assign_sum(x,y,z,t);
-                break;
-            case DIFF:
-                geo_assert_not_reached;
-                break;
-            case PRODUCT:
-                // HERE: TODO CHECK SIZE
-                const expansion& p1 = expansion_product(x,y);
-                const expansion& p2 = expansion_product(z,t);
-                rep_ = expansion::new_expansion_on_heap(
-                    expansion::product_capacity(p1,p2)
-                );
-                rep_->assign_sum(p1,p2);
-                break;
-            }
+    explicit expansion_nt(
+        Operation op, const expansion& x, const expansion& y
+    ) {
+        switch(op) {
+        case SUM:
+            rep_ = expansion::new_expansion_on_heap(
+                expansion::sum_capacity(x,y)
+            );
+            rep_->assign_sum(x,y);
+            break;
+        case DIFF:
+            rep_ = expansion::new_expansion_on_heap(
+                expansion::diff_capacity(x,y)
+            );
+            rep_->assign_diff(x,y);
+            break;
+        case PRODUCT:
+            rep_ = expansion::new_expansion_on_heap(
+                expansion::product_capacity(x,y)
+            );
+            rep_->assign_product(x,y);
+            break;
         }
-        
-        explicit expansion_nt(Operation op, double x, double y) {
-            switch(op) {
-            case SUM:
-                rep_ = expansion::new_expansion_on_heap(
-                    expansion::sum_capacity(x,y)
-                );
-                rep_->assign_sum(x,y);
-                break;
-            case DIFF:
-                rep_ = expansion::new_expansion_on_heap(
-                    expansion::diff_capacity(x,y)
-                );
-                rep_->assign_diff(x,y);
-                break;
-            case PRODUCT:
-                rep_ = expansion::new_expansion_on_heap(
-                    expansion::product_capacity(x,y)
-                );
-                rep_->assign_product(x,y);
-                break;
-            }
+    }
+
+    explicit expansion_nt(
+        Operation op,
+        const expansion& x, const expansion& y, const expansion& z
+    ) {
+        switch(op) {
+        case SUM:
+            rep_ = expansion::new_expansion_on_heap(
+                expansion::sum_capacity(x,y,z)
+            );
+            rep_->assign_sum(x,y,z);
+            break;
+        case DIFF:
+            geo_assert_not_reached;
+            break;
+        case PRODUCT:
+            rep_ = expansion::new_expansion_on_heap(
+                expansion::product_capacity(x,y,z)
+            );
+            rep_->assign_product(x,y,z);
+            break;
         }
-        
-        expansion_nt(const expansion_nt& rhs) {
+    }
+
+    explicit expansion_nt(
+        Operation op,
+        const expansion& x, const expansion& y,
+        const expansion& z, const expansion& t
+    ) {
+        switch(op) {
+        case SUM:
+            rep_ = expansion::new_expansion_on_heap(
+                expansion::sum_capacity(x,y,z,t)
+            );
+            rep_->assign_sum(x,y,z,t);
+            break;
+        case DIFF:
+            geo_assert_not_reached;
+            break;
+        case PRODUCT:
+            // HERE: TODO CHECK SIZE
+            const expansion& p1 = expansion_product(x,y);
+            const expansion& p2 = expansion_product(z,t);
+            rep_ = expansion::new_expansion_on_heap(
+                expansion::product_capacity(p1,p2)
+            );
+            rep_->assign_sum(p1,p2);
+            break;
+        }
+    }
+
+    explicit expansion_nt(Operation op, double x, double y) {
+        switch(op) {
+        case SUM:
+            rep_ = expansion::new_expansion_on_heap(
+                expansion::sum_capacity(x,y)
+            );
+            rep_->assign_sum(x,y);
+            break;
+        case DIFF:
+            rep_ = expansion::new_expansion_on_heap(
+                expansion::diff_capacity(x,y)
+            );
+            rep_->assign_diff(x,y);
+            break;
+        case PRODUCT:
+            rep_ = expansion::new_expansion_on_heap(
+                expansion::product_capacity(x,y)
+            );
+            rep_->assign_product(x,y);
+            break;
+        }
+    }
+
+    expansion_nt(const expansion_nt& rhs) {
+        copy(rhs);
+    }
+
+    expansion_nt(expansion_nt&& rhs) {
+        rep_ = nullptr;
+        std::swap(rep_, rhs.rep_);
+    }
+
+    expansion_nt& operator= (const expansion_nt& rhs) {
+        if(&rhs != this) {
+            cleanup();
             copy(rhs);
         }
+        return *this;
+    }
 
-        expansion_nt(expansion_nt&& rhs) {
-            rep_ = nullptr;
+    expansion_nt& operator= (expansion_nt&& rhs) {
+        if(&rhs != this) {
+            cleanup();
             std::swap(rep_, rhs.rep_);
         }
-        
-        expansion_nt& operator= (const expansion_nt& rhs) {
-            if(&rhs != this) {
-                cleanup();
-                copy(rhs);
-            }
-            return *this;
-        }
+        return *this;
+    }
 
-        expansion_nt& operator= (expansion_nt&& rhs) {
-            if(&rhs != this) {
-                cleanup();
-                std::swap(rep_, rhs.rep_);
-            }
-            return *this;
-        }
-        
-        ~expansion_nt() {
-            cleanup();
-        }
+    ~expansion_nt() {
+        cleanup();
+    }
 
-        void optimize() {
-            rep().optimize();
-        }
+    void optimize() {
+        rep().optimize();
+    }
 
-        void negate() {
-            rep().negate();
-        }
-        
-        
+    void negate() {
+        rep().negate();
+    }
 
-        expansion_nt& operator+= (const expansion_nt& rhs);
+    
 
-        expansion_nt& operator-= (const expansion_nt& rhs);
+    expansion_nt& operator+= (const expansion_nt& rhs);
 
-        expansion_nt& operator*= (const expansion_nt& rhs);
+    expansion_nt& operator-= (const expansion_nt& rhs);
 
-        expansion_nt& operator+= (double rhs);
+    expansion_nt& operator*= (const expansion_nt& rhs);
 
-        expansion_nt& operator-= (double rhs);
+    expansion_nt& operator+= (double rhs);
 
-        expansion_nt& operator*= (double rhs);
+    expansion_nt& operator-= (double rhs);
 
-        
+    expansion_nt& operator*= (double rhs);
 
-        expansion_nt operator+ (const expansion_nt& rhs) const;
+    
 
-        expansion_nt operator- (const expansion_nt& rhs) const;
+    expansion_nt operator+ (const expansion_nt& rhs) const;
 
-        expansion_nt operator* (const expansion_nt& rhs) const;
+    expansion_nt operator- (const expansion_nt& rhs) const;
 
-        expansion_nt operator+ (double rhs) const;
+    expansion_nt operator* (const expansion_nt& rhs) const;
 
-        expansion_nt operator- (double rhs) const;
+    expansion_nt operator+ (double rhs) const;
 
-        expansion_nt operator* (double rhs) const;
+    expansion_nt operator- (double rhs) const;
 
-        
+    expansion_nt operator* (double rhs) const;
 
-        expansion_nt operator- () const;
+    
 
-        
+    expansion_nt operator- () const;
 
-        Sign compare(const expansion_nt& rhs) const {
-            return rep().compare(rhs.rep());
-        }
+    
 
-        Sign compare(double rhs) const {
-            return rep().compare(rhs);
-        }
-        
-        bool operator> (const expansion_nt& rhs) const {
-            return (int(compare(rhs))>0);
-        }
+    Sign compare(const expansion_nt& rhs) const {
+        return rep().compare(rhs.rep());
+    }
 
-        bool operator>= (const expansion_nt& rhs) const {
-            return (int(compare(rhs))>=0);
-        }
+    Sign compare(double rhs) const {
+        return rep().compare(rhs);
+    }
 
-        bool operator< (const expansion_nt& rhs) const {
-            return (int(compare(rhs))<0);
-        }
+    bool operator> (const expansion_nt& rhs) const {
+        return (int(compare(rhs))>0);
+    }
 
-        bool operator<= (const expansion_nt& rhs) const {
-            return (int(compare(rhs))<=0);
-        }
+    bool operator>= (const expansion_nt& rhs) const {
+        return (int(compare(rhs))>=0);
+    }
 
-        bool operator> (double rhs) const {
-            return (int(compare(rhs))>0);            
-        }
+    bool operator< (const expansion_nt& rhs) const {
+        return (int(compare(rhs))<0);
+    }
 
-        bool operator>= (double rhs) const {
-            return (int(compare(rhs))>=0);            
-        }
-        
-        bool operator< (double rhs) const {
-            return (int(compare(rhs))<0);                        
-        }
+    bool operator<= (const expansion_nt& rhs) const {
+        return (int(compare(rhs))<=0);
+    }
 
-        bool operator<= (double rhs) const {
-            return (int(compare(rhs))<=0);            
-        }
+    bool operator> (double rhs) const {
+        return (int(compare(rhs))>0);
+    }
 
-        
+    bool operator>= (double rhs) const {
+        return (int(compare(rhs))>=0);
+    }
 
-        double estimate() const {
-            return rep().estimate();
-        }
-        
-        Sign sign() const {
-            return rep().sign();
-        }
+    bool operator< (double rhs) const {
+        return (int(compare(rhs))<0);
+    }
 
-        index_t length() const {
-            return rep().length();
-        }
+    bool operator<= (double rhs) const {
+        return (int(compare(rhs))<=0);
+    }
 
-        double component(index_t i) const {
-            geo_debug_assert(i < length());
-            return rep()[i];
-        }
-        
-        expansion_nt(expansion* rep) :
-            rep_(rep) {
-        }
+    
 
-        expansion& rep() {
-            return *rep_;
-        }
+    double estimate() const {
+        return rep().estimate();
+    }
 
-        const expansion& rep() const {
-            return *rep_;
-        }
+    Sign sign() const {
+        return rep().sign();
+    }
 
-        std::string to_string() const {
-            return (rep_ == nullptr) ?
-                std::string("null") :
-                rep_->to_string()   ;
-        }
-        
+    index_t length() const {
+        return rep().length();
+    }
+
+    double component(index_t i) const {
+        geo_debug_assert(i < length());
+        return rep()[i];
+    }
+
+    expansion_nt(expansion* rep) :
+    rep_(rep) {
+    }
+
+    expansion& rep() {
+        return *rep_;
+    }
+
+    const expansion& rep() const {
+        return *rep_;
+    }
+
+    std::string to_string() const {
+        return (rep_ == nullptr) ?
+            std::string("null") :
+            rep_->to_string()   ;
+    }
+
     protected:
 
-        void copy(const expansion_nt& rhs) {
-            if(rhs.rep_ == nullptr) {
-                rep_ = nullptr;
-            } else {
-                rep_ = expansion::new_expansion_on_heap(rhs.rep().capacity());
-                rep_->set_length(rhs.rep().length());
-                for(index_t i=0; i<rep_->length(); ++i) {
-                    (*rep_)[i] = rhs.rep()[i];
-                }
+    void copy(const expansion_nt& rhs) {
+        if(rhs.rep_ == nullptr) {
+            rep_ = nullptr;
+        } else {
+            rep_ = expansion::new_expansion_on_heap(rhs.rep().capacity());
+            rep_->set_length(rhs.rep().length());
+            for(index_t i=0; i<rep_->length(); ++i) {
+                (*rep_)[i] = rhs.rep()[i];
             }
         }
+    }
 
-        void cleanup() {
-            if(rep_ != nullptr) {
-                expansion::delete_expansion_on_heap(rep_);
-                rep_ = nullptr;
-            }
+    void cleanup() {
+        if(rep_ != nullptr) {
+            expansion::delete_expansion_on_heap(rep_);
+            rep_ = nullptr;
         }
-        
+    }
+
     private:
-        expansion* rep_;
-        friend expansion_nt operator- (double a, const expansion_nt& b);
+    expansion* rep_;
+    friend expansion_nt operator- (double a, const expansion_nt& b);
 
-        friend expansion_nt expansion_nt_sq_dist(
-            const double* a, const double* b, coord_index_t dim
-        );
+    friend expansion_nt expansion_nt_sq_dist(
+        const double* a, const double* b, coord_index_t dim
+    );
 
-        friend expansion_nt expansion_nt_dot_at(
-            const double* a, const double* b, const double* c,
-            coord_index_t dim
-        );
-        // friend class rational_nt;
+    friend expansion_nt expansion_nt_dot_at(
+        const double* a, const double* b, const double* c,
+        coord_index_t dim
+    );
+    // friend class rational_nt;
     };
 
     inline expansion_nt operator+ (double a, const expansion_nt& b) {
@@ -6516,7 +6607,7 @@ namespace GEO {
     ) {
         return x.compare(y);
     }
-    
+
     
 
     inline bool expansion_nt_is_zero(const expansion_nt& x) {
@@ -6539,7 +6630,7 @@ namespace GEO {
         expansion_nt result(
             expansion::new_expansion_on_heap(
                 expansion::square_capacity(x.rep()
-             ))
+                                          ))
         );
         result.rep().assign_square(x.rep());
         return result;
@@ -6547,10 +6638,10 @@ namespace GEO {
 
 
     expansion_nt GEOGRAM_API expansion_nt_determinant(
-        const expansion_nt& a00,const expansion_nt& a01,  
+        const expansion_nt& a00,const expansion_nt& a01,
         const expansion_nt& a10,const expansion_nt& a11
     );
-    
+
     expansion_nt GEOGRAM_API expansion_nt_determinant(
         const expansion_nt& a00,const expansion_nt& a01,const expansion_nt& a02,
         const expansion_nt& a10,const expansion_nt& a11,const expansion_nt& a12,
@@ -6565,15 +6656,15 @@ namespace GEO {
         const expansion_nt& a20,const expansion_nt& a21,
         const expansion_nt& a22,const expansion_nt& a23,
         const expansion_nt& a30,const expansion_nt& a31,
-        const expansion_nt& a32,const expansion_nt& a33 
+        const expansion_nt& a32,const expansion_nt& a33
     );
 
 // Make things a bit faster if target OS has large stack size
 #ifdef GEO_HAS_BIG_STACK
-    
-    
+
+
     template <> inline expansion_nt det2x2(
-        const expansion_nt& a11, const expansion_nt& a12,                    
+        const expansion_nt& a11, const expansion_nt& a12,
         const expansion_nt& a21, const expansion_nt& a22
     ) {
         return expansion_nt_determinant(
@@ -6582,12 +6673,12 @@ namespace GEO {
         );
     }
 
-    
+
     template <> inline expansion_nt det3x3(
         const expansion_nt& a11, const expansion_nt& a12,
-        const expansion_nt& a13,                
+        const expansion_nt& a13,
         const expansion_nt& a21, const expansion_nt& a22,
-        const expansion_nt& a23,                
+        const expansion_nt& a23,
         const expansion_nt& a31, const expansion_nt& a32,
         const expansion_nt& a33
     ) {
@@ -6598,27 +6689,27 @@ namespace GEO {
         );
     }
 
-    
+
     template <> inline expansion_nt det4x4(
         const expansion_nt& a11, const expansion_nt& a12,
         const expansion_nt& a13, const expansion_nt& a14,
         const expansion_nt& a21, const expansion_nt& a22,
-        const expansion_nt& a23, const expansion_nt& a24,               
+        const expansion_nt& a23, const expansion_nt& a24,
         const expansion_nt& a31, const expansion_nt& a32,
-        const expansion_nt& a33, const expansion_nt& a34,  
+        const expansion_nt& a33, const expansion_nt& a34,
         const expansion_nt& a41, const expansion_nt& a42,
-        const expansion_nt& a43, const expansion_nt& a44  
+        const expansion_nt& a43, const expansion_nt& a44
     ) {
         return expansion_nt_determinant(
             a11,a12,a13,a14,
             a21,a22,a23,a24,
             a31,a32,a33,a34,
-            a41,a42,a43,a44            
+            a41,a42,a43,a44
         );
     }
-    
+
 #endif
-    
+
     
 }
 
@@ -6644,7 +6735,7 @@ namespace GEO {
     
 
     namespace Numeric {
-        
+
         template<> inline void optimize_number_representation(expansion_nt& x) {
             x.optimize();
         }
@@ -6654,7 +6745,7 @@ namespace GEO {
             const expansion_nt& b_num, const expansion_nt& b_denom
         );
     }
-    
+
     
 
     typedef rationalg<expansion_nt> rational_nt;
@@ -6703,7 +6794,7 @@ namespace GEO {
             fesetround(FE_UPWARD);
 #endif
         }
-        
+
         enum Sign2 {
             SIGN2_ERROR = -1,
             SIGN2_ZERO  =  0,
@@ -6712,7 +6803,7 @@ namespace GEO {
             SIGN2_ZP,
             SIGN2_NN,
             SIGN2_NZ
-	};
+        };
 
         static bool sign_is_determined(Sign2 s) {
             return
@@ -6726,7 +6817,7 @@ namespace GEO {
                 s == SIGN2_NN   ||
                 s == SIGN2_PP   ;
         }
-        
+
         static Sign convert_sign(Sign2 s) {
             geo_assert(sign_is_determined(s));
             if(s == SIGN2_NN) {
@@ -6749,7 +6840,7 @@ namespace GEO {
         intervalBase(const intervalBase& rhs) = default;
 
         intervalBase& operator=(const intervalBase& rhs) = default;
-        
+
     protected:
 #ifdef INTERVAL_CHECK
         void control_set(const expansion_nt& x) {
@@ -6800,15 +6891,15 @@ namespace GEO {
             geo_argused(x);
         }
         void control_set(const intervalBase& x) {
-            geo_argused(x);            
+            geo_argused(x);
         }
         void control_negate() {
         }
         void control_add(const intervalBase& x) {
-            geo_argused(x);            
+            geo_argused(x);
         }
         void control_sub(const intervalBase& x) {
-            geo_argused(x);            
+            geo_argused(x);
         }
         void control_mul(const intervalBase& x) {
             geo_argused(x);
@@ -6819,9 +6910,9 @@ namespace GEO {
         }
 #endif
     };
-    
 
-    
+
+
 
     class intervalRU : public intervalBase {
     public:
@@ -6834,27 +6925,27 @@ namespace GEO {
                 set_FPU_round_to_nearest();
             }
         };
-        
+
         intervalRU() :
             intervalBase(),
             ln_(0.0),
             u_(0.0)
-        {
-            control_check();
-        }
-        
+            {
+                control_check();
+            }
+
         intervalRU(double x) :
             intervalBase(x),
             ln_(-x),
             u_(x)
-        {
-            control_check();
-        }
+            {
+                control_check();
+            }
 
         intervalRU(double l, double u) : ln_(-l), u_(u) {
             // note: we cannot control check here.
         }
-        
+
         intervalRU(const intervalRU& rhs) = default;
 
         intervalRU(const expansion_nt& rhs) {
@@ -6862,7 +6953,7 @@ namespace GEO {
         }
 
         intervalRU& operator=(const intervalRU& rhs) = default;
-        
+
         intervalRU& operator=(double rhs) {
             ln_ = -rhs;
             u_ = rhs;
@@ -6872,7 +6963,7 @@ namespace GEO {
         }
 
         intervalRU& operator=(const expansion_nt& rhs) {
-            
+
             // Optimized expansion-to-interval conversion:
             //
             // Add components starting from the one of largest magnitude
@@ -6904,7 +6995,7 @@ namespace GEO {
                     // -new_ln = -ln + comp
                     // Which means:
                     //  new_ln =  ln - comp
-                    
+
                     double new_ln = ln_ - comp;
                     if(new_ln == ln_) {
                         ln_ = std::nextafter(
@@ -6925,22 +7016,22 @@ namespace GEO {
         double inf() const {
             return -ln_;
         }
-        
+
         double sup() const {
-            return u_; 
+            return u_;
         }
-        
+
         double estimate() const {
             // 0.5*(lb+ub) ->
             return 0.5*(-ln_+u_);
         }
-        
+
         bool is_nan() const {
             return !(ln_==ln_) || !(u_==u_);
         }
 
         Sign2 sign() const {
-            // Branchless 
+            // Branchless
             int lz = int(ln_ == 0);
             int ln = int(ln_ >  0); // inverted, it is ln_ !!!
             int lp = int(ln_ <  0); // inverted, it is ln_ !!!
@@ -6964,10 +7055,10 @@ namespace GEO {
         intervalRU& negate() {
             std::swap(ln_, u_);
             control_negate();
-            control_check(); 
+            control_check();
             return *this;
         }
-        
+
         intervalRU& operator+=(const intervalRU &x) {
             // lb += x.lb -> -lbn += -x.lbn -> lbn += x.lbn
             ln_ += x.ln_;
@@ -6976,7 +7067,7 @@ namespace GEO {
             control_check();
             return *this;
         }
-        
+
         intervalRU& operator-=(const intervalRU &x) {
             // +=(x.negate()) ->
             ln_ += x.u_;
@@ -6996,7 +7087,7 @@ namespace GEO {
 
             // negated bounds round to upper
             // (equivalent to bounds round to lower)
-            double lln = (-aln)*bln;                
+            double lln = (-aln)*bln;
             double lun = aln*bu;
             double uln = au*bln;
             double uun = (-au)*bu;
@@ -7006,18 +7097,18 @@ namespace GEO {
             double lu = (-aln)*bu;
             double ul = au*(-bln);
             double uu = au*bu;
-            
+
             ln_ = std::max(std::max(lln,lun),std::max(uln,uun));
             u_  = std::max(std::max(ll,lu),std::max(ul,uu));
-            
+
             control_mul(b);
             control_check();
             return *this;
         }
 
     protected:
-        
-#ifdef INTERVAL_CHECK        
+
+#ifdef INTERVAL_CHECK
         void control_check() {
             // expansion_nt used in control_check() operates
             // in round to nearest mode !!
@@ -7050,7 +7141,7 @@ namespace GEO {
     }
 
     
-    
+
     class intervalRN : public intervalBase {
     public:
 
@@ -7062,28 +7153,28 @@ namespace GEO {
             ~Rounding() {
             }
         };
-        
+
         intervalRN() :
             intervalBase(),
             lb_(0.0),
             ub_(0.0)
-        {
-            control_check();
-        }
+            {
+                control_check();
+            }
 
         intervalRN(double x) :
             intervalBase(x),
             lb_(x),
             ub_(x)
-        {
-            control_check();
-        }
+            {
+                control_check();
+            }
 
         intervalRN(double l, double u) : lb_(l), ub_(u) {
             // note: we cannot control check here.
         }
 
-        
+
         intervalRN(const intervalRN& rhs) = default;
 
         intervalRN(const expansion_nt& rhs) {
@@ -7091,7 +7182,7 @@ namespace GEO {
         }
 
         intervalRN& operator=(const intervalRN& rhs) = default;
-        
+
         intervalRN& operator=(double rhs) {
             lb_ = rhs;
             ub_ = rhs;
@@ -7101,13 +7192,13 @@ namespace GEO {
         }
 
         intervalRN& operator=(const expansion_nt& rhs) {
-            
+
             // Optimized expansion-to-interval conversion:
             //
             // Add components starting from the one of largest magnitude
             // Stop as soon as next component is smaller than ulp (and then
             // expand interval by ulp).
-            
+
             index_t l = rhs.length();
             lb_ = rhs.component(l-1);
             ub_ = rhs.component(l-1);
@@ -7142,19 +7233,19 @@ namespace GEO {
             control_check();
             return *this;
         }
-        
+
         double inf() const {
             return lb_;
         }
-        
+
         double sup() const {
-            return ub_; 
+            return ub_;
         }
-        
+
         double estimate() const {
             return 0.5*(lb_ + ub_);
         }
-        
+
         bool is_nan() const {
             return !(lb_==lb_) || !(ub_==ub_);
         }
@@ -7165,8 +7256,8 @@ namespace GEO {
             }
             // Branchless (not sure it is super though...)
             int lz = int(lb_ ==  0);
-            int ln = int(lb_ <   0); 
-            int lp = int(lb_ >   0); 
+            int ln = int(lb_ <   0);
+            int lp = int(lb_ >   0);
             int uz = int(ub_ ==  0);
             int un = int(ub_ <   0);
             int up = int(ub_ >   0);
@@ -7178,12 +7269,12 @@ namespace GEO {
                 ln*uz*SIGN2_NZ
             );
             result = Sign2(
-                int(result) + 
+                int(result) +
                 int(result==SIGN2_ZERO && !(lz&&uz)) * SIGN2_ERROR
             );
             return result;
         }
-        
+
         intervalRN& negate() {
             lb_ = -lb_;
             ub_ = -ub_;
@@ -7192,7 +7283,7 @@ namespace GEO {
             control_check();
             return *this;
         }
-        
+
         intervalRN& operator+=(const intervalRN &x) {
             lb_ += x.lb_;
             ub_ += x.ub_;
@@ -7201,7 +7292,7 @@ namespace GEO {
             control_check();
             return *this;
         }
-        
+
         intervalRN& operator-=(const intervalRN &x) {
             lb_ -= x.ub_;
             ub_ -= x.lb_;
@@ -7210,14 +7301,14 @@ namespace GEO {
             control_check();
             return *this;
         }
-        
+
         intervalRN& operator*=(const intervalRN &x) {
             if(!is_nan() && !x.is_nan()) {
                 double ll = lb_*x.lb_;
                 double lu = lb_*x.ub_;
                 double ul = ub_*x.lb_;
                 double uu = ub_*x.ub_;
-                
+
                 if(!(ll==ll)) ll = 0.0;
                 if(!(lu==lu)) lu = 0.0;
                 if(!(ul==ul)) ul = 0.0;
@@ -7229,10 +7320,10 @@ namespace GEO {
 
                 if(lu>uu) uu = lu;
                 if(ul>uu) uu = ul;
-                
+
                 lb_ = ll;
                 ub_ = uu;
-                
+
                 adjust();
             } else {
                 lb_ = std::numeric_limits<double>::quiet_NaN();
@@ -7240,17 +7331,17 @@ namespace GEO {
             }
             control_mul(x);
             control_check();
-            return *this;            
+            return *this;
         }
-        
+
     protected:
-        
+
         void adjust() {
             static constexpr double i = std::numeric_limits<double>::infinity();
             static constexpr double e = std::numeric_limits<double>::epsilon();
-                      // nextafter(1.0) - 1.0
+            // nextafter(1.0) - 1.0
             static constexpr double m = std::numeric_limits<double>::min();
-                      // smallest normalized
+            // smallest normalized
             static constexpr double l = 1.0-e;
             static constexpr double u = 1.0+e;
             static constexpr double em = e*m;
@@ -7282,15 +7373,15 @@ namespace GEO {
             }
         }
 
-#ifdef INTERVAL_CHECK        
+#ifdef INTERVAL_CHECK
         void control_check() {
             intervalBase::control_check(inf(),sup());
         }
 #else
         void control_check() {
         }
-#endif        
-        
+#endif
+
     private:
         double lb_; 
         double ub_; 
@@ -7310,7 +7401,7 @@ namespace GEO {
         intervalRN result = a;
         return result *= b;
     }
-    
+
     typedef intervalRN interval_nt; // Seems that valgrind does not support RU
     //typedef intervalRU interval_nt;
 
@@ -7332,15 +7423,14 @@ namespace GEO {
         return vec3Hg<interval_nt>(
             det2x2(p1.x,p1.w,p2.x,p2.w),
             det2x2(p1.y,p1.w,p2.y,p2.w),
-            det2x2(p1.z,p1.w,p2.z,p2.w),            
+            det2x2(p1.z,p1.w,p2.z,p2.w),
             p1.w * p2.w
         );
     }
-    
+
 }
-        
+
 #endif
-        
 
 /******* extracted from ../numerics/exact_geometry.h *******/
 
@@ -7358,18 +7448,18 @@ namespace GEO {
 // exact_nt coordinates makes the algorithm  10x to 20x faster
 // and have no risk of underflow / overflow.
 #ifdef GEOGRAM_WITH_GEOGRAMPLUS
-#define GEOGRAM_USE_EXACT_NT  
+#define GEOGRAM_USE_EXACT_NT
 #endif
 
 namespace GEO {
 
     typedef vecng<2,expansion_nt> vec2E;
 
-    typedef vecng<3,expansion_nt> vec3E;    
+    typedef vecng<3,expansion_nt> vec3E;
 
-    typedef vecng<2,interval_nt> vec2I;    
-    
-    typedef vecng<3,interval_nt> vec3I;    
+    typedef vecng<2,interval_nt> vec2I;
+
+    typedef vecng<3,interval_nt> vec3I;
 
     typedef vec2Hg<expansion_nt> vec2HE;
 
@@ -7395,13 +7485,13 @@ namespace GEO {
     inline VEC2 make_vec2(
         const vec2& p1, const vec2& p2
     ) {
-        typedef typename VEC2::value_type value_type;        
+        typedef typename VEC2::value_type value_type;
         return VEC2(
             value_type(p2.x) - value_type(p1.x),
             value_type(p2.y) - value_type(p1.y)
         );
     }
-    
+
     template <class VEC3>
     inline VEC3 triangle_normal(
         const vec3& p1, const vec3& p2, const vec3& p3
@@ -7445,19 +7535,19 @@ namespace GEO {
             const vec2HE& p2, const vec2HE& p3,
             double l0, double l1, double l2, double l3
         );
-        
+
         inline Sign incircle_2d_SOS(
             const vec2HE& p0, const vec2HE& p1,
             const vec2HE& p2, const vec2HE& p3
         ) {
             double l0 = (geo_sqr(p0.x) + geo_sqr(p0.y)).estimate() /
-                         geo_sqr(p0.w).estimate();
+                geo_sqr(p0.w).estimate();
             double l1 = (geo_sqr(p1.x) + geo_sqr(p1.y)).estimate() /
-                         geo_sqr(p1.w).estimate();
+                geo_sqr(p1.w).estimate();
             double l2 = (geo_sqr(p2.x) + geo_sqr(p2.y)).estimate() /
-                         geo_sqr(p2.w).estimate();
+                geo_sqr(p2.w).estimate();
             double l3 = (geo_sqr(p3.x) + geo_sqr(p3.y)).estimate() /
-                         geo_sqr(p3.w).estimate();
+                geo_sqr(p3.w).estimate();
             return incircle_2d_SOS_with_lengths(p0,p1,p2,p3,l0,l1,l2,l3);
         }
 
@@ -7472,11 +7562,11 @@ namespace GEO {
         bool GEOGRAM_API on_segment_3d(
             const vec3HE& p, const vec3HE& q1, const vec3HE& q2
         );
-        
+
         vec3 GEOGRAM_API approximate(const vec3HE& p);
 
         vec2 GEOGRAM_API approximate(const vec2HE& p);
-        
+
     }
 
     
@@ -7488,22 +7578,22 @@ namespace GEO {
             expansion_nt(expansion_nt::DIFF, p2.y, p1.y)
         );
     }
-    
+
     template <>
     inline vec3E make_vec3<vec3E>(const vec3& p1, const vec3& p2) {
         return vec3E(
             expansion_nt(expansion_nt::DIFF, p2.x, p1.x),
             expansion_nt(expansion_nt::DIFF, p2.y, p1.y),
-            expansion_nt(expansion_nt::DIFF, p2.z, p1.z)            
+            expansion_nt(expansion_nt::DIFF, p2.z, p1.z)
         );
     }
-    
+
 // Under Linux we got 10 Mb of stack (!) Then some operations can be
 // made faster by using the low-level expansion API (that allocates
 // intermediary multiprecision values on stack rather than in the heap).
 // These optimized functions are written as template specializations
-// (used automatically).    
-    
+// (used automatically).
+
 #ifdef GEO_HAS_BIG_STACK
 
     template<> expansion_nt GEOGRAM_API det(const vec2E& v1, const vec2E& v2);
@@ -7511,7 +7601,7 @@ namespace GEO {
     template<> expansion_nt GEOGRAM_API dot(const vec2E& v1, const vec2E& v2);
 
     template<> expansion_nt GEOGRAM_API dot(const vec3E& v1, const vec3E& v2);
-    
+
     template<> vec2Hg<expansion_nt> GEOGRAM_API mix(
         const rationalg<expansion_nt>& t,
         const vecng<2,double>& p1, const vecng<2,double>& p2
@@ -7521,13 +7611,13 @@ namespace GEO {
         const rationalg<expansion_nt>& t,
         const vecng<3,double>& p1, const vecng<3,double>& p2
     );
-    
+
     template <> GEOGRAM_API vec3E triangle_normal<vec3E>(
         const vec3& p1, const vec3& p2, const vec3& p3
     );
-    
+
 #endif
-    
+
     
 
     namespace exact {
@@ -7540,7 +7630,7 @@ namespace GEO {
         typedef vecng<3,scalar> vec3; 
 
         typedef vec2Hg<scalar> vec2h;
-        
+
         typedef vec3Hg<scalar> vec3h;
 
         typedef rationalg<scalar> rational;
@@ -7588,14 +7678,14 @@ namespace GEO {
             std::vector<std::string>& out,
             bool skip_empty_fields = true
         );
-        
+
         bool GEOGRAM_API split_string(
             const std::string& in,
             char separator,
             std::string& left,
             std::string& right
         );
-        
+
         std::string GEOGRAM_API join_strings(
             const std::vector<std::string>& in,
             char separator
@@ -7630,47 +7720,49 @@ namespace GEO {
         );
 
         std::string GEOGRAM_API format(const char* format, ...)
-#ifndef GOMGEN            
+#ifndef GOMGEN
 #ifdef GEO_COMPILER_GCC_FAMILY
         // Tells the compiler that format is a printf-like format
         // string, so that it can check that the arguments match
         // the format string and bark at you if it is not the case.
-        __attribute__ ((__format__(printf, 1, 2)))
+            __attribute__ ((__format__(printf, 1, 2)))
 #endif
-#endif            
-        ; 
+#endif
+            ;
+
+	std::string GEOGRAM_API format_time(double seconds, bool HMS_only=false);
 
         template <class T>
         inline std::string to_string(const T& value) {
             std::ostringstream out;
-	    // Makes sure that double-precision number are displayed
-	    // with a sufficient number of digits. This is important
-	    // to avoid losing precision when using ASCII files.
-	    out << std::setprecision(17);
+            // Makes sure that double-precision number are displayed
+            // with a sufficient number of digits. This is important
+            // to avoid losing precision when using ASCII files.
+            out << std::setprecision(17);
             out << value;
             return out.str();
         }
 
         template <class T>
         inline std::string to_display_string(const T& value) {
-	    return to_string(value);
-	}
+            return to_string(value);
+        }
 
 
         template <>
         inline std::string to_display_string(const double& value) {
-            std::ostringstream out;	    
+            std::ostringstream out;
             out << value;
             return out.str();
-	}
+        }
 
         template <>
         inline std::string to_display_string(const float& value) {
-            std::ostringstream out;	    
+            std::ostringstream out;
             out << value;
             return out.str();
-	}
-	
+        }
+
         template <>
         inline std::string to_string(const bool& value) {
             return value ? "true" : "false";
@@ -7800,16 +7892,16 @@ namespace GEO {
         template <>
         inline bool from_string(const char* s, bool& value) {
             if(strcmp(s, "true") == 0 ||
-                strcmp(s, "True") == 0 ||
-                strcmp(s, "1") == 0
-            ) {
+               strcmp(s, "True") == 0 ||
+               strcmp(s, "1") == 0
+              ) {
                 value = true;
                 return true;
             }
             if(strcmp(s, "false") == 0 ||
-                strcmp(s, "False") == 0 ||
-                strcmp(s, "0") == 0
-            ) {
+               strcmp(s, "False") == 0 ||
+               strcmp(s, "0") == 0
+              ) {
                 value = false;
                 return true;
             }
@@ -7848,12 +7940,11 @@ namespace GEO {
             return value;
         }
 
-	std::string GEOGRAM_API wchar_to_UTF8(const wchar_t* in);
+        std::string GEOGRAM_API wchar_to_UTF8(const wchar_t* in);
     }
 }
 
 #endif
-
 
 /******* extracted from ../basic/line_stream.h *******/
 
@@ -7868,90 +7959,89 @@ namespace GEO {
 
     class GEOGRAM_API LineInput {
     public:
-        LineInput(const std::string& filename);
+    LineInput(const std::string& filename);
 
-        ~LineInput();
+    ~LineInput();
 
-        bool OK() const {
-            return ok_;
+    bool OK() const {
+        return ok_;
+    }
+
+    bool eof() const {
+        return feof(F_) ? true : false;
+    }
+
+    bool get_line();
+
+    index_t nb_fields() const {
+        return index_t(field_.size());
+    }
+
+    size_t line_number() const {
+        return line_num_;
+    }
+
+    char* field(index_t i) {
+        geo_assert(i < nb_fields());
+        return field_[i];
+    }
+
+    const char* field(index_t i) const {
+        geo_assert(i < nb_fields());
+        return field_[i];
+    }
+
+    signed_index_t field_as_int(index_t i) const {
+        signed_index_t result = 0;
+        if(!String::from_string(field(i), result)) {
+            conversion_error(i, "integer");
         }
+        return result;
+    }
 
-        bool eof() const {
-            return feof(F_) ? true : false;
+    index_t field_as_uint(index_t i) const {
+        index_t result = 0;
+        if(!String::from_string(field(i), result)) {
+            conversion_error(i, "unsigned integer");
         }
+        return result;
+    }
 
-        bool get_line();
-
-        index_t nb_fields() const {
-            return index_t(field_.size());
+    double field_as_double(index_t i) const {
+        double result = 0;
+        if(!String::from_string(field(i), result)) {
+            conversion_error(i, "floating point");
         }
+        return result;
+    }
 
-        size_t line_number() const {
-            return line_num_;
-        }
+    bool field_matches(index_t i, const char* s) const {
+        return strcmp(field(i), s) == 0;
+    }
 
-        char* field(index_t i) {
-            geo_assert(i < nb_fields());
-            return field_[i];
-        }
+    void get_fields(const char* separators = " \t\r\n");
 
-        const char* field(index_t i) const {
-            geo_assert(i < nb_fields());
-            return field_[i];
-        }
-
-        signed_index_t field_as_int(index_t i) const {
-            signed_index_t result = 0;
-            if(!String::from_string(field(i), result)) {
-                conversion_error(i, "integer");
-            }
-            return result;
-        }
-
-        index_t field_as_uint(index_t i) const {
-            index_t result = 0;
-            if(!String::from_string(field(i), result)) {
-                conversion_error(i, "unsigned integer");
-            }
-            return result;
-        }
-
-        double field_as_double(index_t i) const {
-            double result = 0;
-            if(!String::from_string(field(i), result)) {
-                conversion_error(i, "floating point");
-            }
-            return result;
-        }
-
-        bool field_matches(index_t i, const char* s) const {
-            return strcmp(field(i), s) == 0;
-        }
-
-        void get_fields(const char* separators = " \t\r\n");
-
-        const char* current_line() const {
-            return line_;
-        }
+    const char* current_line() const {
+        return line_;
+    }
 
     private:
-        GEO_NORETURN_DECL void conversion_error(
-            index_t index, const char* type
-        ) const GEO_NORETURN ;
+    GEO_NORETURN_DECL void conversion_error(
+        index_t index, const char* type
+    ) const GEO_NORETURN ;
 
-        static const index_t MAX_LINE_LEN = 65535;
+    static constexpr index_t MAX_LINE_LEN = 65535;
 
-        FILE* F_;
-        std::string file_name_;
-        size_t line_num_;
-        char line_[MAX_LINE_LEN];
-        std::vector<char*> field_;
-        bool ok_;
+    FILE* F_;
+    std::string file_name_;
+    size_t line_num_;
+    char line_[MAX_LINE_LEN];
+    std::vector<char*> field_;
+    bool ok_;
     };
 }
 
 #endif
-
 
 /******* extracted from ../basic/stopwatch.h *******/
 
@@ -7966,35 +8056,37 @@ namespace GEO {
 
     class GEOGRAM_API Stopwatch {
     public:
-        Stopwatch(const std::string& task_name, bool verbose=true);
+    Stopwatch(const std::string& task_name, bool verbose=true);
 
 
-        Stopwatch();
-        
-        double elapsed_time() const;
+    Stopwatch();
 
-        ~Stopwatch();
+    double elapsed_time() const;
 
-        static double now();
+    ~Stopwatch();
 
-        static double process_elapsed_time() {
-            return now() - process_start_time_;
-        }
-        
-        static void initialize();
-        static void show_stats();
-        
+
+    void print_elapsed_time();
+
+    static double now();
+
+    static double process_elapsed_time() {
+        return now() - process_start_time_;
+    }
+
+    static void initialize();
+    static void show_stats();
+
     private:
-        static double process_start_time_;
-        static bool global_stats_;
-        std::chrono::time_point<std::chrono::system_clock> start_;
-        std::string task_name_;
-	bool verbose_;
+    static double process_start_time_;
+    static bool global_stats_;
+    std::chrono::time_point<std::chrono::system_clock> start_;
+    std::string task_name_;
+    bool verbose_;
     };
 }
 
 #endif
-
 
 /******* extracted from ../basic/command_line.h *******/
 
@@ -8012,19 +8104,21 @@ namespace GEO {
         void GEOGRAM_API terminate();
 
 
-	void GEOGRAM_API set_config_file_name(
-	    const std::string& filename,
-	    bool auto_create_args = false
-	);
+        void GEOGRAM_API set_config_file_name(
+            const std::string& filename,
+            bool auto_create_args = false
+        );
 
-	bool GEOGRAM_API config_file_loaded();
-	
-	std::string GEOGRAM_API get_config_file_name();
+        bool GEOGRAM_API config_file_loaded();
 
-	void GEOGRAM_API load_config(
-	    const std::string& filename, const std::string& program_name
-	);
-	
+        std::string GEOGRAM_API get_config_file_name();
+
+        void GEOGRAM_API load_config(
+            const std::string& filename, const std::string& program_name = "*"
+        );
+
+	void GEOGRAM_API save_config(const std::string& filename);
+
         enum ArgType {
             
             ARG_UNDEFINED = 0,
@@ -8146,15 +8240,15 @@ namespace GEO {
             int argc, char** argv
         );
 
-	int GEOGRAM_API argc();
+        int GEOGRAM_API argc();
 
-	
-	typedef char** charptrptr; // Need to do that else the compiler thinks
-	                           // that GEOGRAM_API qualifies the ptr instead
-	                           // of the function.
-	
-	charptrptr GEOGRAM_API argv();
-	
+
+        typedef char** charptrptr; // Need to do that else the compiler thinks
+        // that GEOGRAM_API qualifies the ptr instead
+        // of the function.
+
+        charptrptr GEOGRAM_API argv();
+
         void GEOGRAM_API show_usage(
             const std::string& additional_args = "",
             bool advanced = false
@@ -8223,7 +8317,7 @@ namespace GEO {
         void GEOGRAM_API set_arg(
             const std::string& name, Numeric::uint64 value
         );
-        
+
         void GEOGRAM_API set_arg(const std::string& name, double value);
 
         void GEOGRAM_API set_arg(const std::string& name, bool value);
@@ -8283,9 +8377,9 @@ struct android_app;
 
 namespace GEO {
     namespace CmdLine {
-	void GEOGRAM_API set_android_app(android_app* app);
+        void GEOGRAM_API set_android_app(android_app* app);
 
-	android_app* GEOGRAM_API get_android_app();
+        android_app* GEOGRAM_API get_android_app();
     }
 }
 
@@ -8293,7 +8387,6 @@ namespace GEO {
 
 
 #endif
-
 
 /******* extracted from ../basic/command_line_args.h *******/
 
@@ -8317,7 +8410,6 @@ namespace GEO {
 }
 
 #endif
-
 
 /******* extracted from ../voronoi/convex_cell.h *******/
 
@@ -8355,21 +8447,21 @@ namespace VBW {
     typedef unsigned int global_index_t;
 #   define vbw_assert(x) assert(x)
     struct vec2 {
-	double x;
-	double y;
+        double x;
+        double y;
     };
     struct vec3 {
-	double x;
-	double y;
-	double z;
+        double x;
+        double y;
+        double z;
     };
     struct vec4 {
-	double x;
-	double y;
-	double z;
-	double w;
+        double x;
+        double y;
+        double z;
+        double w;
     };
-#else    
+#else
     using GEO::vector;
     typedef unsigned int index_t;        // Always 32 bits
     typedef GEO::index_t global_index_t; // Possibly 64 bits in GARGANTUA mode
@@ -8377,206 +8469,206 @@ namespace VBW {
     using GEO::vec2;
     using GEO::vec3;
     using GEO::vec4;
-#endif    
-    
+#endif
+
 
 
 
     inline vec2 make_vec2(
-	double x, double y
+        double x, double y
     ) {
-	vec2 result;
-	result.x = x;
-	result.y = y;
-	return result;
+        vec2 result;
+        result.x = x;
+        result.y = y;
+        return result;
     }
-    
+
 
     inline vec3 make_vec3(
-	double x, double y, double z
+        double x, double y, double z
     ) {
-	vec3 result;
-	result.x = x;
-	result.y = y;
-	result.z = z;
-	return result;
+        vec3 result;
+        result.x = x;
+        result.y = y;
+        result.z = z;
+        return result;
     }
 
 
     inline vec3 cross(vec3 v1, vec3 v2) {
-	return make_vec3(
-	    v1.y*v2.z - v1.z*v2.y,
-	    v1.z*v2.x - v1.x*v2.z,
-	    v1.x*v2.y - v1.y*v2.x
-	);
+        return make_vec3(
+            v1.y*v2.z - v1.z*v2.y,
+            v1.z*v2.x - v1.x*v2.z,
+            v1.x*v2.y - v1.y*v2.x
+        );
     }
 
     inline double dot(vec3 v1, vec3 v2) {
-	return (
-	    v1.x*v2.x + v1.y*v2.y + v1.z*v2.z
-	);
+        return (
+            v1.x*v2.x + v1.y*v2.y + v1.z*v2.z
+        );
     }
 
     inline double squared_length(vec3 v) {
-	return (v.x*v.x + v.y*v.y + v.z*v.z);
+        return (v.x*v.x + v.y*v.y + v.z*v.z);
     }
 
     inline double squared_distance(vec3 v, vec3 w) {
-	double dx = w.x-v.x;
-	double dy = w.y-v.y;
-	double dz = w.z-v.z;
-	return (dx*dx+dy*dy+dz*dz);
+        double dx = w.x-v.x;
+        double dy = w.y-v.y;
+        double dz = w.z-v.z;
+        return (dx*dx+dy*dy+dz*dz);
     }
 
     inline double length(vec3 v) {
-	return ::sqrt(squared_length(v));
+        return ::sqrt(squared_length(v));
     }
 
     inline vec3 normalize(vec3 v) {
-	double s = 1.0/length(v);
-	return make_vec3(
-	    s*v.x, s*v.y, s*v.z
-	);
+        double s = 1.0/length(v);
+        return make_vec3(
+            s*v.x, s*v.y, s*v.z
+        );
     }
-    
+
     inline vec4 make_vec4(
-	double x, double y, double z, double w
+        double x, double y, double z, double w
     ) {
-	vec4 result;
-	result.x = x;
-	result.y = y;
-	result.z = z;
-	result.w = w;
-	return result;
+        vec4 result;
+        result.x = x;
+        result.y = y;
+        result.z = z;
+        result.w = w;
+        return result;
     }
 
     inline double dot(vec4 v1, vec4 v2) {
-	return (
-	    v1.x*v2.x + v1.y*v2.y +
-	    v1.z*v2.z + v1.w*v2.w
-	);
+        return (
+            v1.x*v2.x + v1.y*v2.y +
+            v1.z*v2.z + v1.w*v2.w
+        );
     }
 
     inline double squared_length(vec4 v) {
-	return (
-	    v.x*v.x + v.y*v.y +
-	    v.z*v.z + v.w*v.w
-	);
+        return (
+            v.x*v.x + v.y*v.y +
+            v.z*v.z + v.w*v.w
+        );
     }
 
     inline double length(vec4 v) {
-	return ::sqrt(squared_length(v));
+        return ::sqrt(squared_length(v));
     }
 
     inline double squared_point_plane_distance(VBW::vec3 p, VBW::vec4 P) {
-	double result = P.x*p.x + P.y*p.y + P.z*p.z + P.w;
-	result = (result*result) / (P.x*P.x + P.y*P.y + P.z*P.z);
-	return result;
+        double result = P.x*p.x + P.y*p.y + P.z*p.z + P.w;
+        result = (result*result) / (P.x*P.x + P.y*P.y + P.z*P.z);
+        return result;
     }
-    
+
     enum {
-	CONFLICT_MASK  = 32768, 
-	MARKED_MASK    = 16384, 	
-	END_OF_LIST    = 16383, 
-	VERTEX_AT_INFINITY = 0  
+        CONFLICT_MASK  = 32768, 
+        MARKED_MASK    = 16384, 
+        END_OF_LIST    = 16383, 
+        VERTEX_AT_INFINITY = 0  
     };
 
 
     typedef unsigned char uchar;
-    
+
     typedef unsigned short ushort;
 
     struct Triangle {
-	ushort i;
-	ushort j;
-	ushort k;
-	ushort operator[](unsigned int index) const {
-	    vbw_assert(index < 3);
-	    return (&i)[index];
-	}
-	ushort& operator[](unsigned int index) {
-	    vbw_assert(index < 3);
-	    return (&i)[index];
-	}
+        ushort i;
+        ushort j;
+        ushort k;
+        ushort operator[](unsigned int index) const {
+            vbw_assert(index < 3);
+            return (&i)[index];
+        }
+        ushort& operator[](unsigned int index) {
+            vbw_assert(index < 3);
+            return (&i)[index];
+        }
     };
 
     inline Triangle make_triangle(
-	ushort i, ushort j, ushort k
+        ushort i, ushort j, ushort k
     ) {
-	Triangle result;
-	result.i = i;
-	result.j = j;
-	result.k = k;
-	return result;
+        Triangle result;
+        result.i = i;
+        result.j = j;
+        result.k = k;
+        return result;
     }
 
     struct TriangleWithFlags : public Triangle {
-	ushort flags;
+        ushort flags;
     };
 
     inline TriangleWithFlags make_triangle_with_flags(
-	ushort i, ushort j, ushort k, ushort f
+        ushort i, ushort j, ushort k, ushort f
     ) {
-	TriangleWithFlags result;
-	result.i = i;
-	result.j = j;
-	result.k = k;
-	result.flags = f;
-	return result;
+        TriangleWithFlags result;
+        result.i = i;
+        result.j = j;
+        result.k = k;
+        result.flags = f;
+        return result;
     }
 
 
 
 
     inline double det2x2(
-	double a11, double a12,
-	double a21, double a22
+        double a11, double a12,
+        double a21, double a22
     ) {
-	return a11*a22 - a12*a21;
+        return a11*a22 - a12*a21;
     }
-    
+
     inline double det3x3(
-	double a11, double a12, double a13,
-	double a21, double a22, double a23,
-	double a31, double a32, double a33
+        double a11, double a12, double a13,
+        double a21, double a22, double a23,
+        double a31, double a32, double a33
     ) {
-	return
-	    a11*det2x2(a22,a23,a32,a33)
-	    -a21*det2x2(a12,a13,a32,a33)
-	    +a31*det2x2(a12,a13,a22,a23);
+        return
+            a11*det2x2(a22,a23,a32,a33)
+            -a21*det2x2(a12,a13,a32,a33)
+            +a31*det2x2(a12,a13,a22,a23);
     }
 
     inline double det4x4(
-	double a11, double a12, double a13, double a14,
-	double a21, double a22, double a23, double a24,               
-	double a31, double a32, double a33, double a34,  
-	double a41, double a42, double a43, double a44  
+        double a11, double a12, double a13, double a14,
+        double a21, double a22, double a23, double a24,
+        double a31, double a32, double a33, double a34,
+        double a41, double a42, double a43, double a44
     ) {
-	double m12 = a21*a12 - a11*a22;
-	double m13 = a31*a12 - a11*a32;
-	double m14 = a41*a12 - a11*a42;
-	double m23 = a31*a22 - a21*a32;
-	double m24 = a41*a22 - a21*a42;
-	double m34 = a41*a32 - a31*a42;
-	
-	double m123 = m23*a13 - m13*a23 + m12*a33;
-	double m124 = m24*a13 - m14*a23 + m12*a43;
-	double m134 = m34*a13 - m14*a33 + m13*a43;
-	double m234 = m34*a23 - m24*a33 + m23*a43;
-	
-	return (m234*a14 - m134*a24 + m124*a34 - m123*a44);
-    }   
+        double m12 = a21*a12 - a11*a22;
+        double m13 = a31*a12 - a11*a32;
+        double m14 = a41*a12 - a11*a42;
+        double m23 = a31*a22 - a21*a32;
+        double m24 = a41*a22 - a21*a42;
+        double m34 = a41*a32 - a31*a42;
+
+        double m123 = m23*a13 - m13*a23 + m12*a33;
+        double m124 = m24*a13 - m14*a23 + m12*a43;
+        double m134 = m34*a13 - m14*a33 + m13*a43;
+        double m234 = m34*a23 - m24*a33 + m23*a43;
+
+        return (m234*a14 - m134*a24 + m124*a34 - m123*a44);
+    }
 
 
 
     enum ConvexCellFlag {
-	None        = 0, 
-	WithVGlobal = 1,  
-	WithTFlags  = 2  
+        None        = 0, 
+        WithVGlobal = 1, 
+        WithTFlags  = 2  
     };
 
     typedef index_t ConvexCellFlags;
-    
+
     class GEOGRAM_API ConvexCell {
     public:
 
@@ -8584,133 +8676,133 @@ namespace VBW {
 
 #ifndef STANDALONE_CONVEX_CELL
     void use_exact_predicates(bool x) {
-	use_exact_predicates_ = x;
+        use_exact_predicates_ = x;
     }
 #endif
-	
+
     bool has_vglobal() const {
-	return has_vglobal_;
+        return has_vglobal_;
     }
 
     bool has_tflags() const {
-	return has_tflags_;
+        return has_tflags_;
     }
 
     void create_vglobal() {
-	if(!has_vglobal()) {
-	    has_vglobal_ = true;
-	    vglobal_.assign(max_v(), global_index_t(-1));
-	}
+        if(!has_vglobal()) {
+            has_vglobal_ = true;
+            vglobal_.assign(max_v(), global_index_t(-1));
+        }
     }
-	
+
     void clear();
-	
+
     void init_with_box(
-	double xmin, double ymin, double zmin,
-	double xmax, double ymax, double zmax
+        double xmin, double ymin, double zmin,
+        double xmax, double ymax, double zmax
     );
 
     void init_with_tet(
-	vec4 P0, vec4 P1, vec4 P2, vec4 P3
+        vec4 P0, vec4 P1, vec4 P2, vec4 P3
     );
 
     void init_with_tet(
-	vec4 P0, vec4 P1, vec4 P2, vec4 P3,
-	global_index_t P0_global_index,
-	global_index_t P1_global_index,
-	global_index_t P2_global_index,
-	global_index_t P3_global_index	    
+        vec4 P0, vec4 P1, vec4 P2, vec4 P3,
+        global_index_t P0_global_index,
+        global_index_t P1_global_index,
+        global_index_t P2_global_index,
+        global_index_t P3_global_index
     );
-      
+
     void save(const std::string& filename, double shrink=0.0) const;
 
 
     index_t save(
-	std::ostream& out, global_index_t v_offset=1, double shrink=0.0,
-	bool borders_only=false
+        std::ostream& out, global_index_t v_offset=1, double shrink=0.0,
+        bool borders_only=false
     ) const;
 
 #if !defined(STANDALONE_CONVEX_CELL) && !defined(GEOGRAM_PSM)
     void append_to_mesh(
-	GEO::Mesh* mesh,
-	double shrink=0.0, bool borders_only=false,
-	GEO::Attribute<GEO::index_t>* facet_attr=nullptr
+        GEO::Mesh* mesh,
+        double shrink=0.0, bool borders_only=false,
+        GEO::Attribute<GEO::index_t>* facet_attr=nullptr
     ) const;
 
-#endif      
+#endif
 
     void for_each_Voronoi_vertex(
-	index_t v,
-	std::function<void(index_t)> vertex
+        index_t v,
+        std::function<void(index_t)> vertex
     );
-      
+
     void clip_by_plane(vec4 P);
 
     void clip_by_plane(vec4 P, global_index_t j);
 
 
     void clip_by_plane(
-	vec4 P, global_index_t P_global_index,
-	std::function<bool(ushort,ushort)> triangle_conflict_predicate
+        vec4 P, global_index_t P_global_index,
+        std::function<bool(ushort,ushort)> triangle_conflict_predicate
     );
-      
+
     void clip_by_plane_fast(vec4 P);
 
-    void clip_by_plane_fast(vec4 P, global_index_t j);      
-      
+    void clip_by_plane_fast(vec4 P, global_index_t j);
+
     index_t nb_t() const {
-	return nb_t_;
+        return nb_t_;
     }
 
     index_t nb_v() const {
-	return nb_v_;
+        return nb_v_;
     }
 
     index_t create_vertex(vec4 P) {
-	if(nb_v_ == max_v_) {
-	    grow_v();
-	}
-	plane_eqn_[nb_v_] = P;
-	index_t result = nb_v_;
-	++nb_v_;
-	return result;
+        if(nb_v_ == max_v_) {
+            grow_v();
+        }
+        plane_eqn_[nb_v_] = P;
+        index_t result = nb_v_;
+        ++nb_v_;
+        return result;
     }
 
     index_t create_vertex(vec4 P, global_index_t v) {
-	index_t result = create_vertex(P);
-	vglobal_[nb_v()-1] = v;
-	return result;
+        index_t result = create_vertex(P);
+        vglobal_[nb_v()-1] = v;
+        return result;
     }
-	
+
     index_t create_triangle(index_t i, index_t j, index_t k) {
-	vbw_assert(i < nb_v());
-	vbw_assert(j < nb_v());
-	vbw_assert(k < nb_v());
-	return new_triangle(i,j,k);
+        vbw_assert(i < nb_v());
+        vbw_assert(j < nb_v());
+        vbw_assert(k < nb_v());
+        return new_triangle(i,j,k);
     }
 
     void kill_vertex(index_t v);
 
     bool vertex_is_contributing(index_t v) const {
-	if(!geometry_dirty_) {
-	    return v2t_[v] != END_OF_LIST;
-	}
-	index_t t = first_valid_;
-	while(t != END_OF_LIST) { 
-	    TriangleWithFlags T = get_triangle_and_flags(t);
-	    if(T.i == v || T.j == v || T.k == v) {
-		return true;
-	    }
-	    t = index_t(T.flags);
-	}
-	return false;
+        if(!geometry_dirty_) {
+            return v2t_[v] != END_OF_LIST;
+        }
+        index_t t = first_valid_;
+        while(t != END_OF_LIST) {
+            TriangleWithFlags T = get_triangle_and_flags(t);
+            if(T.i == v || T.j == v || T.k == v) {
+                return true;
+            }
+            t = index_t(T.flags);
+        }
+        return false;
     }
 
     index_t vertex_triangle(index_t v) const {
-	geo_assert(!geometry_dirty_);	    
-	return v2t_[v];
+        geo_assert(!geometry_dirty_);
+        return v2t_[v];
     }
-	
+
     void compute_geometry();
 
     double facet_area(index_t v) const;
@@ -8721,247 +8813,247 @@ namespace VBW {
 
     void compute_mg(double& m, vec3& mg) const ;
 
-      
+
     double squared_radius(vec3 center) const;
 
     double squared_inner_radius(vec3 center) const;
 
-	
+
     bool empty() const {
-	return first_valid_ == END_OF_LIST;
+        return first_valid_ == END_OF_LIST;
     }
 
     global_index_t v_global_index(index_t lv) const {
-	vbw_assert(has_vglobal_);
-	vbw_assert(lv < nb_v());
-	return vglobal_[lv];
+        vbw_assert(has_vglobal_);
+        vbw_assert(lv < nb_v());
+        return vglobal_[lv];
     }
 
     void set_v_global_index(index_t lv, global_index_t v) {
-	vbw_assert(has_vglobal_);
-	vbw_assert(lv < nb_v());
-	vglobal_[lv] = v;
+        vbw_assert(has_vglobal_);
+        vbw_assert(lv < nb_v());
+        vglobal_[lv] = v;
     }
-	
+
     bool has_v_global_index(global_index_t v) const;
 
     ushort first_triangle() const {
-	return ushort(first_valid_);
+        return ushort(first_valid_);
     }
 
     ushort next_triangle(ushort t) const {
-	return get_triangle_flags(t);
+        return get_triangle_flags(t);
     }
 
     vec3 triangle_point(ushort t) const {
-	if(geometry_dirty_) {
-	    vec4 result = compute_triangle_point(t);
-	    vbw_assert(result.w != 0.0);
-	    return make_vec3(
-		result.x/result.w, result.y/result.w, result.z/result.w
-	    );
-	}
-	return triangle_point_[t];
+        if(geometry_dirty_) {
+            vec4 result = compute_triangle_point(t);
+            vbw_assert(result.w != 0.0);
+            return make_vec3(
+                result.x/result.w, result.y/result.w, result.z/result.w
+            );
+        }
+        return triangle_point_[t];
     }
 
     global_index_t triangle_v_global_index(ushort t, index_t llv) const {
-	Triangle T = get_triangle(t);
-	ushort lv = ushort((llv==0)*T.i + (llv==1)*T.j + (llv==2)*T.k);
-	return v_global_index(lv);
+        Triangle T = get_triangle(t);
+        ushort lv = ushort((llv==0)*T.i + (llv==1)*T.j + (llv==2)*T.k);
+        return v_global_index(lv);
     }
 
     index_t triangle_v_local_index(ushort t, index_t llv) const {
-	Triangle T = get_triangle(t);
-	return index_t((llv==0)*T.i + (llv==1)*T.j + (llv==2)*T.k);
+        Triangle T = get_triangle(t);
+        return index_t((llv==0)*T.i + (llv==1)*T.j + (llv==2)*T.k);
     }
 
     bool triangle_is_user_marked(ushort t) {
-	vbw_assert(has_tflags_);
-	vbw_assert(t < max_t_);
-	return (tflags_[t] != 0);
+        vbw_assert(has_tflags_);
+        vbw_assert(t < max_t_);
+        return (tflags_[t] != 0);
     }
 
     void triangle_user_mark(ushort t) {
-	vbw_assert(has_tflags_);
-	vbw_assert(t < max_t_);
-	tflags_[t] = 1;
+        vbw_assert(has_tflags_);
+        vbw_assert(t < max_t_);
+        tflags_[t] = 1;
     }
 
     void triangle_user_unmark(ushort t) {
-	vbw_assert(has_tflags_);
-	vbw_assert(t < max_t_);
-	tflags_[t] = 0;
+        vbw_assert(has_tflags_);
+        vbw_assert(t < max_t_);
+        tflags_[t] = 0;
     }
 
     bool cell_has_conflict(const vec4& P) {
-	for(
-	    ushort t = first_triangle();
-	    t!=END_OF_LIST; t=next_triangle(t)
-	) {
-	    TriangleWithFlags T = get_triangle_and_flags(t);
-	    if(triangle_is_in_conflict(T,P)) {
-		return true;
-	    }
-	}
-	return false;
+        for(
+            ushort t = first_triangle();
+            t!=END_OF_LIST; t=next_triangle(t)
+        ) {
+            TriangleWithFlags T = get_triangle_and_flags(t);
+            if(triangle_is_in_conflict(T,P)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     bool cell_is_totally_in_conflict(const vec4& P) {
-	for(
-	    ushort t = first_triangle();
-	    t!=END_OF_LIST; t=next_triangle(t)
-	) {
-	    TriangleWithFlags T = get_triangle_and_flags(t);
-	    if(!triangle_is_in_conflict(T,P)) {
-		return false;
-	    }
-	}
-	return true;
+        for(
+            ushort t = first_triangle();
+            t!=END_OF_LIST; t=next_triangle(t)
+        ) {
+            TriangleWithFlags T = get_triangle_and_flags(t);
+            if(!triangle_is_in_conflict(T,P)) {
+                return false;
+            }
+        }
+        return true;
     }
-      
+
     index_t triangle_adjacent(index_t t, index_t le) const {
-	vbw_assert(t < max_t());
-	vbw_assert(le < 3);
-	return t_adj_[t][le]; 
+        vbw_assert(t < max_t());
+        vbw_assert(le < 3);
+        return t_adj_[t][le];
     }
 
 
     void set_triangle_adjacent(index_t t1, index_t le, index_t t2) {
-	vbw_assert(t1 < max_t());
-	vbw_assert(le < 3);
-	vbw_assert(t2 < max_t());
-	t_adj_[t1][le] = VBW::ushort(t2);
+        vbw_assert(t1 < max_t());
+        vbw_assert(le < 3);
+        vbw_assert(t2 < max_t());
+        t_adj_[t1][le] = VBW::ushort(t2);
     }
-      
-      
-      
+
+
+
     index_t triangle_vertex(index_t t, index_t lv) const {
-	vbw_assert(t < max_t());
-	vbw_assert(lv < 3);
-	return t_[t][lv];
+        vbw_assert(t < max_t());
+        vbw_assert(lv < 3);
+        return t_[t][lv];
     }
-      
-      
+
+
     index_t triangle_find_vertex(index_t t, index_t v) const {
-	vbw_assert(t < max_t());
-	Triangle T = get_triangle(t);
-	index_t result = index_t((T.j == v) + 2*(T.k == v));
-	vbw_assert(triangle_vertex(t,result) == v);
-	return result;
+        vbw_assert(t < max_t());
+        Triangle T = get_triangle(t);
+        index_t result = index_t((T.j == v) + 2*(T.k == v));
+        vbw_assert(triangle_vertex(t,result) == v);
+        return result;
     }
 
     index_t triangle_find_adjacent(index_t t1, index_t t2) const {
-	vbw_assert(t1 < max_t());
-	vbw_assert(t2 < max_t());	    
-	Triangle T = t_adj_[t1];
-	index_t result = index_t((T.j == t2) + 2*(T.k == t2));
-	vbw_assert(triangle_adjacent(t1,result) == t2);	    
-	return result;
+        vbw_assert(t1 < max_t());
+        vbw_assert(t2 < max_t());
+        Triangle T = t_adj_[t1];
+        index_t result = index_t((T.j == t2) + 2*(T.k == t2));
+        vbw_assert(triangle_adjacent(t1,result) == t2);
+        return result;
     }
-      
+
     bool triangle_is_infinite(index_t t) const {
-	vbw_assert(t < max_t());
-	Triangle T = get_triangle(t);
-	return (
-	    T.i == VERTEX_AT_INFINITY ||
-	    T.j == VERTEX_AT_INFINITY ||
-	    T.k == VERTEX_AT_INFINITY
-	);
+        vbw_assert(t < max_t());
+        Triangle T = get_triangle(t);
+        return (
+            T.i == VERTEX_AT_INFINITY ||
+            T.j == VERTEX_AT_INFINITY ||
+            T.k == VERTEX_AT_INFINITY
+        );
     }
-	
+
     vec4 vertex_plane(index_t v) const {
-	vbw_assert(v < max_v());
-	return plane_eqn_[v];
+        vbw_assert(v < max_v());
+        return plane_eqn_[v];
     }
 
     vec3 vertex_plane_normal(index_t v) const {
-	vbw_assert(v != VERTEX_AT_INFINITY);
-	vbw_assert(v < max_v());
-	return make_vec3(
-	    plane_eqn_[v].x,
-	    plane_eqn_[v].y,
-	    plane_eqn_[v].z
-	);
+        vbw_assert(v != VERTEX_AT_INFINITY);
+        vbw_assert(v < max_v());
+        return make_vec3(
+            plane_eqn_[v].x,
+            plane_eqn_[v].y,
+            plane_eqn_[v].z
+        );
     }
-	
+
     bool triangle_is_marked_as_conflict(index_t t) const {
-	vbw_assert(t < max_t());
-	return (get_triangle_flags(t) & ushort(CONFLICT_MASK)) != 0;
+        vbw_assert(t < max_t());
+        return (get_triangle_flags(t) & ushort(CONFLICT_MASK)) != 0;
     }
-       
+
     bool triangle_is_in_conflict(
-	TriangleWithFlags T, const vec4& eqn
+        TriangleWithFlags T, const vec4& eqn
     ) const;
 
     index_t new_triangle(index_t i, index_t j, index_t k) {
-	index_t result = first_free_;
-	if(result == END_OF_LIST) {
-	    result = nb_t_;
-	    ++nb_t_;
-	    if(nb_t_ > max_t()) {
-		grow_t();
-	    }
-	} else {
-	    first_free_ = index_t(
-		get_triangle_flags(first_free_) & ~ushort(CONFLICT_MASK)
-	    );
-	}
-	vbw_assert(result < max_t());
-	t_[result] = make_triangle_with_flags(
-	    ushort(i), ushort(j), ushort(k), ushort(first_valid_)
-	);
-	first_valid_ = result;
-	if(has_tflags_) {
-	    tflags_[result] = 0;
-	}
-	return result;
+        index_t result = first_free_;
+        if(result == END_OF_LIST) {
+            result = nb_t_;
+            ++nb_t_;
+            if(nb_t_ > max_t()) {
+                grow_t();
+            }
+        } else {
+            first_free_ = index_t(
+                get_triangle_flags(first_free_) & ~ushort(CONFLICT_MASK)
+            );
+        }
+        vbw_assert(result < max_t());
+        t_[result] = make_triangle_with_flags(
+            ushort(i), ushort(j), ushort(k), ushort(first_valid_)
+        );
+        first_valid_ = result;
+        if(has_tflags_) {
+            tflags_[result] = 0;
+        }
+        return result;
     }
-	
+
     index_t new_triangle(
-	index_t i, index_t j, index_t k,
-	index_t adj0, index_t adj1, index_t adj2
+        index_t i, index_t j, index_t k,
+        index_t adj0, index_t adj1, index_t adj2
     ) {
-	index_t result = new_triangle(i, j, k);
-	t_adj_[result] = make_triangle(
-	    ushort(adj0), ushort(adj1), ushort(adj2)
-	);
-	return result;
+        index_t result = new_triangle(i, j, k);
+        t_adj_[result] = make_triangle(
+            ushort(adj0), ushort(adj1), ushort(adj2)
+        );
+        return result;
     }
 
     vec4 compute_triangle_point(index_t t) const;
 
     Triangle get_triangle(index_t t) const {
-	vbw_assert(t < max_t());
-	return t_[t];
+        vbw_assert(t < max_t());
+        return t_[t];
     }
-	
+
     ushort get_triangle_flags(index_t t) const {
-	vbw_assert(t < max_t());
-	return t_[t].flags;
+        vbw_assert(t < max_t());
+        return t_[t].flags;
     }
 
     void set_triangle_flags(index_t t, ushort flags) {
-	vbw_assert(t < max_t());
-	t_[t].flags = flags;
+        vbw_assert(t < max_t());
+        t_[t].flags = flags;
     }
 
     TriangleWithFlags get_triangle_and_flags(index_t t) const {
-	vbw_assert(t < max_t());
-	return t_[t];
+        vbw_assert(t < max_t());
+        return t_[t];
     }
 
     bool triangle_is_marked_as_conflict(index_t t) {
-	vbw_assert(t < max_t());
-	ushort flg = get_triangle_flags(t);
-	return ((flg & ushort(CONFLICT_MASK)) != 0);
+        vbw_assert(t < max_t());
+        ushort flg = get_triangle_flags(t);
+        return ((flg & ushort(CONFLICT_MASK)) != 0);
     }
-      
+
     index_t max_t() const {
-	return max_t_;
+        return max_t_;
     }
 
     index_t max_v() const {
-	return max_v_;
+        return max_v_;
     }
 
     void grow_t();
@@ -8970,48 +9062,48 @@ namespace VBW {
 
 
     void swap(ConvexCell& other) {
-	std::swap(max_t_,other.max_t_);
-	std::swap(max_v_,other.max_v_);
-	std::swap(t_,other.t_);
-	std::swap(t_adj_,other.t_adj_);
-	std::swap(plane_eqn_,other.plane_eqn_);
-	std::swap(nb_t_,other.nb_t_);
-	std::swap(nb_v_,other.nb_v_);
-	std::swap(first_free_,other.first_free_);
-	std::swap(first_valid_,other.first_valid_);
-	std::swap(geometry_dirty_,other.geometry_dirty_);
-	std::swap(triangle_point_,other.triangle_point_);
-	std::swap(v2t_,other.v2t_);
-	std::swap(v2e_,other.v2e_);	    
-	std::swap(vglobal_,other.vglobal_);
-	std::swap(has_vglobal_,other.has_vglobal_);
-	std::swap(tflags_,other.tflags_);
-	std::swap(has_tflags_,other.has_tflags_);
-#ifndef STANDALONE_CONVEX_CELL	
-	std::swap(use_exact_predicates_,other.use_exact_predicates_);
-#endif	
+        std::swap(max_t_,other.max_t_);
+        std::swap(max_v_,other.max_v_);
+        std::swap(t_,other.t_);
+        std::swap(t_adj_,other.t_adj_);
+        std::swap(plane_eqn_,other.plane_eqn_);
+        std::swap(nb_t_,other.nb_t_);
+        std::swap(nb_v_,other.nb_v_);
+        std::swap(first_free_,other.first_free_);
+        std::swap(first_valid_,other.first_valid_);
+        std::swap(geometry_dirty_,other.geometry_dirty_);
+        std::swap(triangle_point_,other.triangle_point_);
+        std::swap(v2t_,other.v2t_);
+        std::swap(v2e_,other.v2e_);
+        std::swap(vglobal_,other.vglobal_);
+        std::swap(has_vglobal_,other.has_vglobal_);
+        std::swap(tflags_,other.tflags_);
+        std::swap(has_tflags_,other.has_tflags_);
+#ifndef STANDALONE_CONVEX_CELL
+        std::swap(use_exact_predicates_,other.use_exact_predicates_);
+#endif
     }
 
     vec3& stored_triangle_point(ushort t) {
-	return triangle_point_[t];	    
+        return triangle_point_[t];
     }
 
     protected:
 
     void connect_triangles();
-    
+
 
     void triangulate_conflict_zone(
-	index_t lv, index_t conflict_head, index_t conflict_tail
+        index_t lv, index_t conflict_head, index_t conflict_tail
     );
-      
+
     void set_vertex_plane(index_t v, vec4 P) {
-	vbw_assert(v < max_v());
-	plane_eqn_[v] = P;
-	geometry_dirty_ = true;
+        vbw_assert(v < max_v());
+        plane_eqn_[v] = P;
+        geometry_dirty_ = true;
     }
 
-      
+
     private:
 
     
@@ -9025,13 +9117,13 @@ namespace VBW {
 
     
     vector<Triangle> t_adj_;
-      
+
     vector<vec4> plane_eqn_;
 
     
     index_t nb_t_;
 
-    	
+    
     index_t nb_v_;
 
     
@@ -9047,16 +9139,16 @@ namespace VBW {
     vector<ushort> v2t_;
 
     vector<uchar> v2e_;
-      
+
     vector<global_index_t> vglobal_;
-	
+
     bool has_vglobal_;
 
     vector<uchar> tflags_;
-	
+
     bool has_tflags_;
 
-#ifndef STANDALONE_CONVEX_CELL	
+#ifndef STANDALONE_CONVEX_CELL
     bool use_exact_predicates_;
 #endif
 
@@ -9089,6 +9181,7 @@ namespace GEO {
 #endif
 
 #include <algorithm>
+#include <random>
 
 
 namespace GEO {
@@ -9100,9 +9193,9 @@ namespace GEO {
         const ITERATOR& begin, const ITERATOR& end
     ) {
         if(uses_parallel_algorithm()) {
-#if defined(GEO_USE_GCC_PARALLEL_STL) 
+#if defined(GEO_USE_GCC_PARALLEL_STL)
             __gnu_parallel::sort(begin, end);
-#elif defined(GEO_USE_MSVC_PARALLEL_STL) 
+#elif defined(GEO_USE_MSVC_PARALLEL_STL)
             concurrency::parallel_sort(begin, end);
 #else
             std::sort(begin, end);
@@ -9134,47 +9227,55 @@ namespace GEO {
         std::sort(v.begin(), v.end());
         // Note that std::unique leaves a 'queue' of duplicated elements
         // at the end of the vector, and returns an iterator that
-        // indicates where to stop. 
+        // indicates where to stop.
         v.erase(
             std::unique(v.begin(), v.end()), v.end()
         );
     }
 
     template <typename ITERATOR> inline void sort_3(ITERATOR items) {
-	if (items[0]> items[1]) {
-	    std::swap(items[0], items[1]);
-	}
-	if (items[1]> items[2]) {
-	    std::swap(items[1], items[2]);
-	}
-	if (items[0]> items[1]) {
-	    std::swap(items[0], items[1]);
-	}
+        if (items[0]> items[1]) {
+            std::swap(items[0], items[1]);
+        }
+        if (items[1]> items[2]) {
+            std::swap(items[1], items[2]);
+        }
+        if (items[0]> items[1]) {
+            std::swap(items[0], items[1]);
+        }
     }
 
     template <typename ITERATOR> inline void sort_4(ITERATOR items) {
-	if (items[1] < items[0]) {
-	    std::swap(items[0], items[1]);
-	}
-	if (items[3] < items[2]) {
-	    std::swap(items[2], items[3]);
-	}
-	if (items[2] < items[0]) {
-	    std::swap(items[0], items[2]);
-	    std::swap(items[1], items[3]);
-	}
-	if (items[2] < items[1]) {
-	    std::swap(items[1], items[2]);
-	}
-	if (items[3] < items[2]) {
-	    std::swap(items[2], items[3]);
-	}
+        if (items[1] < items[0]) {
+            std::swap(items[0], items[1]);
+        }
+        if (items[3] < items[2]) {
+            std::swap(items[2], items[3]);
+        }
+        if (items[2] < items[0]) {
+            std::swap(items[0], items[2]);
+            std::swap(items[1], items[3]);
+        }
+        if (items[2] < items[1]) {
+            std::swap(items[1], items[2]);
+        }
+        if (items[3] < items[2]) {
+            std::swap(items[2], items[3]);
+        }
     }
-    
+
+    template <typename ITERATOR>
+    inline void random_shuffle(
+        const ITERATOR& begin, const ITERATOR& end
+    ) {
+	std::random_device rng;
+	std::mt19937 urng(rng());
+	std::shuffle(begin, end, urng);
+    }
+
 }
 
 #endif
-
 
 /******* extracted from ../mesh/index.h *******/
 
@@ -9252,8 +9353,8 @@ namespace GEO {
         basic_bindex(const basic_bindex<IndexType>& rhs) = default;
 
         basic_bindex<IndexType>& operator= (
-	    const basic_bindex<IndexType>& rhs
-	) = default;
+            const basic_bindex<IndexType>& rhs
+        ) = default;
 
         static basic_bindex inverse(const basic_bindex<IndexType>& b) {
             return basic_bindex(b.indices[1], b.indices[0], KEEP_ORDER);
@@ -9266,7 +9367,7 @@ namespace GEO {
 
     template <class IndexType>
     inline std::ostream& operator<< (
-	std::ostream& out, const basic_bindex<IndexType>& B
+        std::ostream& out, const basic_bindex<IndexType>& B
     ) {
         return out << B.indices[0] << " " << B.indices[1];
     }
@@ -9294,7 +9395,7 @@ namespace GEO {
             indices[0] = i;
             indices[1] = j;
             indices[2] = k;
-	    GEO::sort_3(indices);
+            GEO::sort_3(indices);
         }
 
         basic_trindex(
@@ -9338,8 +9439,8 @@ namespace GEO {
         basic_trindex(const basic_trindex<IndexType>& rhs) = default;
 
         basic_trindex<IndexType>& operator= (
-	    const basic_trindex<IndexType>& rhs
-	) = default;
+            const basic_trindex<IndexType>& rhs
+        ) = default;
 
         static bool same_orientation(
             const basic_trindex<IndexType>& t,
@@ -9352,9 +9453,9 @@ namespace GEO {
         }
 
         static bool same_orientation(
-	    const basic_trindex<IndexType>& t1,
-	    const basic_trindex<IndexType>& t2
-	) {
+            const basic_trindex<IndexType>& t1,
+            const basic_trindex<IndexType>& t2
+        ) {
             return same_orientation(
                 t1, t2.indices[0], t2.indices[1], t2.indices[2]
             );
@@ -9372,8 +9473,8 @@ namespace GEO {
     typedef basic_trindex<signed_index_t> signed_trindex;
 
     template <class IndexType>
-	inline std::ostream& operator<< (
-	    std::ostream& out, const basic_trindex<IndexType>& T
+    inline std::ostream& operator<< (
+        std::ostream& out, const basic_trindex<IndexType>& T
     ) {
         return out
             << T.indices[0] << " " << T.indices[1] << " " << T.indices[2];
@@ -9403,7 +9504,7 @@ namespace GEO {
             indices[1] = j;
             indices[2] = k;
             indices[3] = l;
-	    GEO::sort_4(indices);
+            GEO::sort_4(indices);
         }
 
         basic_quadindex(
@@ -9449,10 +9550,10 @@ namespace GEO {
         }
 
         basic_quadindex(const basic_quadindex<IndexType>& rhs) = default;
-        
+
         basic_quadindex<IndexType>& operator= (
-	    const basic_quadindex<IndexType>& rhs
-	) = default; 
+            const basic_quadindex<IndexType>& rhs
+        ) = default;
     };
 
     typedef basic_quadindex<index_t> quadindex;
@@ -9472,7 +9573,6 @@ namespace GEO {
 }
 
 #endif
-
 
 /******* extracted from delaunay.h *******/
 
@@ -9508,14 +9608,14 @@ namespace GEO {
             InvalidInput(const InvalidInput& rhs);
 
             ~InvalidInput() GEO_NOEXCEPT override;
-            
+
             const char* what() const GEO_NOEXCEPT override;
 
             int error_code;
 
             vector<index_t> invalid_facets;
         };
-        
+
         static Delaunay* create(
             coord_index_t dim, const std::string& name = "default"
         );
@@ -9574,7 +9674,7 @@ namespace GEO {
         void set_quality(double qual) {
             quality_ = qual;
         }
-        
+
         const Mesh* constraints() const {
             return constraints_;
         }
@@ -9615,7 +9715,7 @@ namespace GEO {
         bool cell_is_finite(index_t c) const {
             return !cell_is_infinite(c);
         }
-        
+
         index_t index(index_t c, signed_index_t v) const {
             geo_debug_assert(c < nb_cells());
             geo_debug_assert(v < (signed_index_t) nb_vertices());
@@ -9644,7 +9744,7 @@ namespace GEO {
             return v_to_cell_[v];
         }
 
-        
+
         signed_index_t next_around_vertex(index_t c, index_t lv) const {
             geo_debug_assert(c < nb_cells());
             geo_debug_assert(lv < cell_size());
@@ -9691,7 +9791,7 @@ namespace GEO {
         void set_keeps_infinite(bool x) {
             keep_infinite_ = x;
         }
-        
+
         bool thread_safe() const {
             return neighbors_.thread_safe();
         }
@@ -9713,12 +9813,12 @@ namespace GEO {
         }
 
         void set_keep_regions(bool x) {
-	    keep_regions_ = x;
-	}
+            keep_regions_ = x;
+        }
 
         virtual index_t region(index_t t) const;
-	    
-	
+
+
     protected:
         Delaunay(coord_index_t dimension);
 
@@ -9778,32 +9878,31 @@ namespace GEO {
         bool store_neighbors_;
         index_t default_nb_neighbors_;
 
-        bool do_reorder_; 
+        bool do_reorder_;
 
         const Mesh* constraints_;
 
         bool refine_;
         double quality_;
 
-        bool store_cicl_; 
+        bool store_cicl_;
 
         bool keep_infinite_;
 
         index_t nb_finite_cells_;
 
-	bool keep_regions_;
+        bool keep_regions_;
     };
 
     typedef SmartPointer<Delaunay> Delaunay_var;
 
     typedef Factory1<Delaunay, coord_index_t> DelaunayFactory;
 
-#define geo_register_Delaunay_creator(type, name) \
+#define geo_register_Delaunay_creator(type, name)               \
     geo_register_creator(GEO::DelaunayFactory, type, name)
 }
 
 #endif
-
 
 /******* extracted from delaunay_2d.h *******/
 
@@ -9826,66 +9925,66 @@ namespace GEO {
 
         index_t nearest_vertex(const double* p) const override;
 
-	bool has_empty_cells() const {
-	    return has_empty_cells_;
-	}
+        bool has_empty_cells() const {
+            return has_empty_cells_;
+        }
 
 
-	void abort_if_empty_cell(bool x) {
-	    abort_if_empty_cell_ = x;
-	}
-	
+        void abort_if_empty_cell(bool x) {
+            abort_if_empty_cell_ = x;
+        }
+
     protected:
 
-        static const index_t NO_TRIANGLE = index_t(-1);
+        static constexpr index_t NO_TRIANGLE = index_t(-1);
 
         bool create_first_triangle(
             index_t& iv0, index_t& iv1, index_t& iv2
         );
 
-         index_t locate(
+        index_t locate(
             const double* p, index_t hint = NO_TRIANGLE,
             bool thread_safe = false,
             Sign* orient = nullptr
-         ) const;
-         
-         index_t locate_inexact(
-             const double* p, index_t hint, index_t max_iter
-         ) const;
+        ) const;
 
-         index_t insert(index_t v, index_t hint = NO_TRIANGLE);
+        index_t locate_inexact(
+            const double* p, index_t hint, index_t max_iter
+        ) const;
 
-         void find_conflict_zone(
-             index_t v, 
-             index_t t, const Sign* orient,
-             index_t& t_bndry, index_t& e_bndry,
-             index_t& first, index_t& last
-         );
-         
-         void find_conflict_zone_iterative(
-             const double* p, index_t t,
-             index_t& t_bndry, index_t& e_bndry,
-             index_t& first, index_t& last
-         );
+        index_t insert(index_t v, index_t hint = NO_TRIANGLE);
 
-         
-         index_t stellate_conflict_zone(
-             index_t v, 
-             index_t t_bndry, index_t e_bndry
-         );
-         
-         // _________ Combinatorics - new and delete _________________________
+        void find_conflict_zone(
+            index_t v,
+            index_t t, const Sign* orient,
+            index_t& t_bndry, index_t& e_bndry,
+            index_t& first, index_t& last
+        );
+
+        void find_conflict_zone_iterative(
+            const double* p, index_t t,
+            index_t& t_bndry, index_t& e_bndry,
+            index_t& first, index_t& last
+        );
+
+
+        index_t stellate_conflict_zone(
+            index_t v,
+            index_t t_bndry, index_t e_bndry
+        );
+
+        // _________ Combinatorics - new and delete _________________________
 
         index_t max_t() const {
             return cell_to_v_store_.size() / 3;
         }
 
 
-        static const index_t NOT_IN_LIST  = index_t(~0);
+        static constexpr index_t NOT_IN_LIST  = index_t(~0);
 
-        static const index_t NOT_IN_LIST_BIT = index_t(1u << 31);
+        static constexpr index_t NOT_IN_LIST_BIT = index_t(1u << 31);
 
-        static const index_t END_OF_LIST = ~(NOT_IN_LIST_BIT);
+        static constexpr index_t END_OF_LIST = ~(NOT_IN_LIST_BIT);
 
 
         bool triangle_is_in_list(index_t t) const {
@@ -9918,26 +10017,26 @@ namespace GEO {
             cell_next_[t] = NOT_IN_LIST;
         }
 
-        static const signed_index_t VERTEX_AT_INFINITY = -1;
+        static constexpr signed_index_t VERTEX_AT_INFINITY = -1;
 
         bool triangle_is_finite(index_t t) const {
-            return 
+            return
                 cell_to_v_store_[3 * t]     >= 0 &&
                 cell_to_v_store_[3 * t + 1] >= 0 &&
                 cell_to_v_store_[3 * t + 2] >= 0 ;
         }
-        
+
         bool triangle_is_real(index_t t) const {
             return !triangle_is_free(t) && triangle_is_finite(t);
         }
 
         bool triangle_is_virtual(index_t t) const {
             return
-            !triangle_is_free(t) && (
-		cell_to_v_store_[3 * t] == VERTEX_AT_INFINITY ||
-		cell_to_v_store_[3 * t + 1] == VERTEX_AT_INFINITY ||
-		cell_to_v_store_[3 * t + 2] == VERTEX_AT_INFINITY
-	    );
+                !triangle_is_free(t) && (
+                    cell_to_v_store_[3 * t] == VERTEX_AT_INFINITY ||
+                    cell_to_v_store_[3 * t + 1] == VERTEX_AT_INFINITY ||
+                    cell_to_v_store_[3 * t + 2] == VERTEX_AT_INFINITY
+                );
         }
 
         bool triangle_is_free(index_t t) const {
@@ -9968,7 +10067,7 @@ namespace GEO {
         }
 
         index_t new_triangle(
-            signed_index_t v1, signed_index_t v2, 
+            signed_index_t v1, signed_index_t v2,
             signed_index_t v3
         ) {
             index_t result = new_triangle();
@@ -10012,7 +10111,7 @@ namespace GEO {
         }
 
 
-         index_t finite_triangle_vertex(index_t t, index_t lv) const {
+        index_t finite_triangle_vertex(index_t t, index_t lv) const {
             geo_debug_assert(t < max_t());
             geo_debug_assert(lv < 3);
             geo_debug_assert(cell_to_v_store_[3 * t + lv] != -1);
@@ -10036,10 +10135,10 @@ namespace GEO {
             geo_debug_assert(t1 < max_t());
             geo_debug_assert(t2 < max_t());
             geo_debug_assert(le1 < 3);
-	    geo_debug_assert(t1 != t2);
+            geo_debug_assert(t1 != t2);
             cell_to_cell_store_[3 * t1 + le1] = signed_index_t(t2);
         }
-        
+
         index_t find_triangle_adjacent(
             index_t t1, index_t t2_in
         ) const {
@@ -10065,7 +10164,7 @@ namespace GEO {
         void set_tet(
             index_t t,
             signed_index_t v0, signed_index_t v1,
-            signed_index_t v2, 
+            signed_index_t v2,
             index_t a0, index_t a1, index_t a2
         ) {
             geo_debug_assert(t < max_t());
@@ -10145,7 +10244,7 @@ namespace GEO {
                 double h = heights_[pindex];
                 return (PCK::orient_2dlifted_SOS(
                             pv[0],pv[1],pv[2],p,h0,h1,h2,h
-                       ) > 0) ;
+                        ) > 0) ;
             }
 
             return (PCK::in_circle_2d_SOS(pv[0], pv[1], pv[2], p) > 0);
@@ -10157,16 +10256,16 @@ namespace GEO {
             const signed_index_t* T, signed_index_t v
         ) {
             // The following expression is 10% faster than using
-            // if() statements. This uses the C++ norm, that 
-            // ensures that the 'true' boolean value converted to 
-            // an int is always 1. With most compilers, this avoids 
+            // if() statements. This uses the C++ norm, that
+            // ensures that the 'true' boolean value converted to
+            // an int is always 1. With most compilers, this avoids
             // generating branching instructions.
             // Thank to Laurent Alonso for this idea.
             index_t result = index_t( (T[1] == v) | ((T[2] == v) * 2) );
             // Sanity check, important if it was T[0], not explicitly
             // tested (detects input that does not meet the precondition).
             geo_debug_assert(T[result] == v);
-            return result; 
+            return result;
         }
 
         ~Delaunay2d() override;
@@ -10193,19 +10292,19 @@ namespace GEO {
         bool weighted_;
         vector<double> heights_; // only used in weighted mode
 
-         bool debug_mode_;
+        bool debug_mode_;
 
-         bool verbose_debug_mode_;
+        bool verbose_debug_mode_;
 
-         bool benchmark_mode_;
+        bool benchmark_mode_;
 
-	 static char triangle_edge_vertex_[3][2];
+        static char triangle_edge_vertex_[3][2];
 
-	 std::stack<index_t> S_;
+        std::stack<index_t> S_;
 
-	 bool has_empty_cells_;
+        bool has_empty_cells_;
 
-	 bool abort_if_empty_cell_;
+        bool abort_if_empty_cell_;
     };
 
     
@@ -10221,7 +10320,6 @@ namespace GEO {
 
 #endif
 
-
 /******* extracted from periodic.h *******/
 
 #ifndef GEOGRAM_DELAUNAY_PERIODIC
@@ -10231,87 +10329,90 @@ namespace GEO {
 
 namespace GEO {
 
-     class GEOGRAM_API Periodic {
-       public:
+    class GEOGRAM_API Periodic {
+    public:
 
-	 index_t periodic_vertex_instance(index_t pv) const {
-	     geo_debug_assert(pv < nb_vertices_non_periodic_ * 27);
-	     return pv / nb_vertices_non_periodic_;
-	 }
+    index_t nb_vertices_non_periodic() const {
+	return nb_vertices_non_periodic_;
+    }
 
-	 index_t periodic_vertex_real(index_t pv) const {
-	     geo_debug_assert(pv < nb_vertices_non_periodic_ * 27);	     
-	     return pv % nb_vertices_non_periodic_;
-	 }
+    index_t periodic_vertex_instance(index_t pv) const {
+        geo_debug_assert(pv < nb_vertices_non_periodic_ * 27);
+        return pv / nb_vertices_non_periodic_;
+    }
 
-	 signed_index_t periodic_vertex_real(signed_index_t pv) const {
-	     geo_debug_assert(
-                 pv < signed_index_t(nb_vertices_non_periodic_ * 27)
-             );
-	     geo_debug_assert(pv != -1);
-	     return pv % signed_index_t(nb_vertices_non_periodic_);	     
-	 }
-	 
-	 index_t make_periodic_vertex(index_t real, index_t instance) const {
-	     geo_debug_assert(real < nb_vertices_non_periodic_);
-	     geo_debug_assert(instance < 27);
-	     return real + nb_vertices_non_periodic_*instance;
-	 }
+    index_t periodic_vertex_real(index_t pv) const {
+        geo_debug_assert(pv < nb_vertices_non_periodic_ * 27);
+        return pv % nb_vertices_non_periodic_;
+    }
 
-	 static index_t T_to_instance(int Tx, int Ty, int Tz) {
-	     geo_debug_assert(Tx >= -1 && Tx <= 1);
-	     geo_debug_assert(Ty >= -1 && Ty <= 1);
-	     geo_debug_assert(Tz >= -1 && Tz <= 1);	     
-	     int i = (Tz+1) + 3*(Ty+1) + 9*(Tx+1);
-	     geo_debug_assert(i >= 0 && i < 27);
-	     return index_t(reorder_instances[i]);
-	 }
+    signed_index_t periodic_vertex_real(signed_index_t pv) const {
+        geo_debug_assert(
+            pv < signed_index_t(nb_vertices_non_periodic_ * 27)
+        );
+        geo_debug_assert(pv != -1);
+        return pv % signed_index_t(nb_vertices_non_periodic_);
+    }
 
-	 void periodic_vertex_get_T(index_t pv, int& Tx, int& Ty, int& Tz) const {
-	     geo_debug_assert(pv < nb_vertices_non_periodic_ * 27);	     	     
-	     index_t instance = periodic_vertex_instance(pv);
-	     Tx = translation[instance][0];
-	     Ty = translation[instance][1];
-	     Tz = translation[instance][2];
-	 }
+    index_t make_periodic_vertex(index_t real, index_t instance) const {
+        geo_debug_assert(real < nb_vertices_non_periodic_);
+        geo_debug_assert(instance < 27);
+        return real + nb_vertices_non_periodic_*instance;
+    }
 
-	 void periodic_vertex_set_T(index_t& pv, int Tx, int Ty, int Tz) const {
-	     geo_debug_assert(pv < nb_vertices_non_periodic_ * 27);
-	     geo_debug_assert(Tx >= -1 && Tx <= 1);
-	     geo_debug_assert(Ty >= -1 && Ty <= 1);
-	     geo_debug_assert(Tz >= -1 && Tz <= 1);	     
-	     pv = make_periodic_vertex(
-		 periodic_vertex_real(pv), T_to_instance(Tx, Ty, Tz)
-	     );
-	 }
+    static index_t T_to_instance(int Tx, int Ty, int Tz) {
+        geo_debug_assert(Tx >= -1 && Tx <= 1);
+        geo_debug_assert(Ty >= -1 && Ty <= 1);
+        geo_debug_assert(Tz >= -1 && Tz <= 1);
+        int i = (Tz+1) + 3*(Ty+1) + 9*(Tx+1);
+        geo_debug_assert(i >= 0 && i < 27);
+        return index_t(reorder_instances[i]);
+    }
 
-	 std::string periodic_vertex_to_string(index_t v) const {
-	     return
-		 String::to_string(periodic_vertex_real(v)) + ":" +
-		 String::to_string(periodic_vertex_instance(v)) ;
-	 }
+    void periodic_vertex_get_T(index_t pv, int& Tx, int& Ty, int& Tz) const {
+        geo_debug_assert(pv < nb_vertices_non_periodic_ * 27);
+        index_t instance = periodic_vertex_instance(pv);
+        Tx = translation[instance][0];
+        Ty = translation[instance][1];
+        Tz = translation[instance][2];
+    }
 
-	 std::string binary_to_string(Numeric::uint32 m) const {
-	     std::string s(32,' ');
-	     for(index_t i=0; i<32; ++i) {
-		 s[i] = ((m & (1u << (31u-i))) != 0) ? '1' : '0'; 
-	     }
-	     return s;
-	 }
-	 
-	 static int translation[27][3];
+    void periodic_vertex_set_T(index_t& pv, int Tx, int Ty, int Tz) const {
+        geo_debug_assert(pv < nb_vertices_non_periodic_ * 27);
+        geo_debug_assert(Tx >= -1 && Tx <= 1);
+        geo_debug_assert(Ty >= -1 && Ty <= 1);
+        geo_debug_assert(Tz >= -1 && Tz <= 1);
+        pv = make_periodic_vertex(
+            periodic_vertex_real(pv), T_to_instance(Tx, Ty, Tz)
+        );
+    }
 
-	 static int reorder_instances[27];
+    std::string periodic_vertex_to_string(index_t v) const {
+        return
+            String::to_string(periodic_vertex_real(v)) + ":" +
+            String::to_string(periodic_vertex_instance(v)) ;
+    }
 
-	 static bool instance_is_positive[27];
+    std::string binary_to_string(Numeric::uint32 m) const {
+        std::string s(32,' ');
+        for(index_t i=0; i<32; ++i) {
+            s[i] = ((m & (1u << (31u-i))) != 0) ? '1' : '0';
+        }
+        return s;
+    }
 
-	 index_t nb_vertices_non_periodic_;
-     };
-    
+    static int translation[27][3];
+
+    static int reorder_instances[27];
+
+    static bool instance_is_positive[27];
+
+    index_t nb_vertices_non_periodic_;
+    };
+
 }
 
 #endif
-
 
 /******* extracted from delaunay_sync.h *******/
 
@@ -10320,16 +10421,35 @@ namespace GEO {
 
 #include <atomic>
 
+// In GARGANTUA mode (64-bit indices), we also enable
+// more than 127 concurrent threads (16-bits cell status,
+// that contain owner thread id).
+#ifdef GARGANTUA
+#define GEO_CONNECTION_MACHINE
+#endif
+
 
 namespace GEO {
 
     class CellStatusArray {
     public:
+#ifdef GEO_CONNECTION_MACHINE
+	// For machines that can run more than 127 concurrent threads
+        typedef uint16_t thread_index_t;
+        typedef uint16_t cell_status_t;
+        static constexpr cell_status_t FREE_CELL     = 32767;
+        static constexpr cell_status_t THREAD_MASK   = 32767;
+        static constexpr cell_status_t CONFLICT_MASK = 32768;
+#else
+        typedef uint8_t thread_index_t;
         typedef uint8_t cell_status_t;
         static constexpr cell_status_t FREE_CELL     = 127;
         static constexpr cell_status_t THREAD_MASK   = 127;
         static constexpr cell_status_t CONFLICT_MASK = 128;
-        
+#endif
+
+	static constexpr index_t MAX_THREADS = index_t(THREAD_MASK)-1;
+
         CellStatusArray() : cell_status_(nullptr), size_(0), capacity_(0) {
         }
 
@@ -10384,18 +10504,13 @@ namespace GEO {
         }
 
         void mark_cell_as_conflict(index_t cell) {
-            // we could also use std::atomic::fetch_or(), but it
-            // would constrain the operation to be atomic, which we
-            // do not need since this function is always used by
-            // a thread that previously acquired the cell (well in
-            // practice it gives approximately the same performance).
-            cell_status_[cell].store(
-                cell_status_[cell].load(
-                    std::memory_order_relaxed
-                ) | CONFLICT_MASK, std::memory_order_relaxed
-            );
+	    // memory_order_relaxed because this function is always called from
+            // a thread that previously acquired the cell.
+	    cell_status_[cell].fetch_or(
+		CONFLICT_MASK, std::memory_order_relaxed
+	    );
         }
-        
+
         void set_cell_status(index_t cell, cell_status_t status) {
             geo_debug_assert(cell < size_);
             cell_status_[cell].store(status, std::memory_order_relaxed);
@@ -10417,11 +10532,11 @@ namespace GEO {
                 delete[] old_cell_status;
             }
             size_ = size_in;
-#ifdef __cpp_lib_atomic_is_always_lock_free                
+#ifdef __cpp_lib_atomic_is_always_lock_free
             static_assert(std::atomic<cell_status_t>::is_always_lock_free);
 #else
             geo_debug_assert(size_ == 0 || cell_status_[0].is_lock_free());
-#endif                
+#endif
         }
 
         void resize(index_t size_in) {
@@ -10448,12 +10563,13 @@ namespace GEO {
 
         void clear() {
             geo_debug_assert(!Process::is_running_threads());
-            #ifdef GEO_DEBUG
+#ifdef GEO_DEBUG
             for(index_t i=0; i<size_; ++i) {
                 geo_debug_assert(cell_thread(i) == FREE_CELL);
             }
-            #endif
+#endif
             delete[] cell_status_;
+	    cell_status_ = nullptr;
             size_ = 0;
             capacity_ = 0;
         }
@@ -10477,188 +10593,227 @@ namespace GEO {
 
 namespace GEO {
 
-    typedef Numeric::uint8 thread_index_t;
     class PeriodicDelaunay3dThread;
-    
-     
+
+
     class GEOGRAM_API PeriodicDelaunay3d : public Delaunay, public Periodic {
     public:
 
         struct IncidentTetrahedra {
-	    std::stack<index_t> S;
-	    vector<index_t> incident_tets_set;
+            std::stack<index_t> S;
+            vector<index_t> incident_tets_set;
 
-	    void clear_incident_tets() {
-		incident_tets_set.resize(0);
-	    }
+            void clear_incident_tets() {
+                incident_tets_set.resize(0);
+            }
 
-	    void add_incident_tet(index_t t) {
-		incident_tets_set.push_back(t);
-	    }
+            void add_incident_tet(index_t t) {
+                incident_tets_set.push_back(t);
+            }
 
-	    bool has_incident_tet(index_t t) const {
-		for(index_t i=0; i<incident_tets_set.size(); ++i) {
-		    if(incident_tets_set[i] == t) {
-			return true;
-		    }
-		}
-		return false;
-	    }
+            bool has_incident_tet(index_t t) const {
+                for(index_t i=0; i<incident_tets_set.size(); ++i) {
+                    if(incident_tets_set[i] == t) {
+                        return true;
+                    }
+                }
+                return false;
+            }
 
-	    vector<index_t>::const_iterator begin() const {
-		return incident_tets_set.begin();
-	    }
+            vector<index_t>::const_iterator begin() const {
+                return incident_tets_set.begin();
+            }
 
-	    vector<index_t>::const_iterator end() const {
-		return incident_tets_set.end();
-	    }
+            vector<index_t>::const_iterator end() const {
+                return incident_tets_set.end();
+            }
         };
-	
+
         PeriodicDelaunay3d(bool periodic, double period=1.0);
 
         PeriodicDelaunay3d(const vec3& period);
-        
+
         void set_vertices(
             index_t nb_vertices, const double* vertices
         ) override;
 
-	void set_weights(const double* weights);
+        void set_weights(const double* weights);
 
-	void compute();
+        void compute();
 
-	void use_exact_predicates_for_convex_cell(bool x) {
-	    convex_cell_exact_predicates_ = x;
-	}
-	
-	vec3 vertex(index_t v) const {
-	    if(!periodic_) {
-		geo_debug_assert(v < nb_vertices());	    
-		return vec3(vertices_ + 3*v);
-	    }
-	    index_t instance = v/nb_vertices_non_periodic_;
-	    v = v%nb_vertices_non_periodic_;
-	    vec3 result(vertices_ + 3*v);
-	    result.x += double(translation[instance][0]) * period_.x;
-	    result.y += double(translation[instance][1]) * period_.y;
-	    result.z += double(translation[instance][2]) * period_.z;
-	    return result;
-	}
+        void use_exact_predicates_for_convex_cell(bool x) {
+            convex_cell_exact_predicates_ = x;
+        }
 
-	double weight(index_t v) const {
-	    if(weights_ == nullptr) {
-		return 0.0;
-	    }
-	    return periodic_ ? weights_[periodic_vertex_real(v)] : weights_[v] ;
-	}
+        vec3 vertex(index_t v) const {
+            if(!periodic_) {
+                geo_debug_assert(v < nb_vertices());
+                return vec3(vertices_ + 3*v);
+            }
+            index_t instance = v/nb_vertices_non_periodic_;
+            v = v%nb_vertices_non_periodic_;
+            vec3 result(vertices_ + 3*v);
+            result.x += double(translation[instance][0]) * period_.x;
+            result.y += double(translation[instance][1]) * period_.y;
+            result.z += double(translation[instance][2]) * period_.z;
+            return result;
+        }
+
+        double weight(index_t v) const {
+            if(weights_ == nullptr) {
+                return 0.0;
+            }
+            return periodic_ ? weights_[periodic_vertex_real(v)] : weights_[v] ;
+        }
 
         index_t nearest_vertex(const double* p) const override;
 
         void set_BRIO_levels(const vector<index_t>& levels) override;
 
-	void get_incident_tets(index_t v, IncidentTetrahedra& W) const;
+        void get_incident_tets(index_t v, IncidentTetrahedra& W) const;
 
-	void copy_Laguerre_cell_from_Delaunay(
-	    GEO::index_t i,
-	    ConvexCell& C,
-	    IncidentTetrahedra& W
-	) const;         
+        void copy_Laguerre_cell_from_Delaunay(
+            GEO::index_t i,
+            ConvexCell& C,
+            IncidentTetrahedra& W
+        ) const;
 
-	void copy_Laguerre_cell_from_Delaunay(
-	    GEO::index_t i,
-	    ConvexCell& C
-	) const {
-	    IncidentTetrahedra W;
-	    copy_Laguerre_cell_from_Delaunay(i,C,W);
-	}
-	
-	bool has_empty_cells() const {
-	    return has_empty_cells_;
-	}
+        void copy_Laguerre_cell_from_Delaunay(
+            GEO::index_t i,
+            ConvexCell& C
+        ) const {
+            IncidentTetrahedra W;
+            copy_Laguerre_cell_from_Delaunay(i,C,W);
+        }
 
-	void save_cells(const std::string& basename, bool clipped);
+        bool has_empty_cells() const {
+            return has_empty_cells_;
+        }
 
-   protected:
+        void save_cells(const std::string& basename, bool clipped);
 
-	GEO::index_t copy_Laguerre_cell_facet_from_Delaunay(
-	    GEO::index_t i,
-	    const GEO::vec3& Pi,
-	    double wi,
-	    double Pi_len2,
-	    GEO::index_t t,
-	    ConvexCell& C,
-	    IncidentTetrahedra& W
-	) const;
-	 
-	 
-	index_t compress(bool shrink=true);
-	
-	void update_v_to_cell() override;
+    protected:
 
-	void update_cicl() override;
+        GEO::index_t copy_Laguerre_cell_facet_from_Delaunay(
+            GEO::index_t i,
+            const GEO::vec3& Pi,
+            double wi,
+            double Pi_len2,
+            GEO::index_t t,
+            ConvexCell& C,
+            IncidentTetrahedra& W
+        ) const;
 
-	void handle_periodic_boundaries();
 
-	index_t get_periodic_vertex_instances_to_create(
-	    index_t v,
-	    ConvexCell& C,
-	    bool use_instance[27],
-	    bool& cell_is_on_boundary,
-	    bool& cell_is_outside_cube,
-	    IncidentTetrahedra& W
+        index_t compress(bool shrink=true);
+
+        void update_v_to_cell() override;
+
+        void update_cicl() override;
+
+        void handle_periodic_boundaries();
+
+
+	void handle_periodic_boundaries_phase_I();
+
+	bool Laguerre_vertex_is_in_conflict_with_plane(index_t t, vec4 P) const;
+
+	void handle_periodic_boundaries_phase_II();
+
+	void insert_vertices(const char* phase, index_t b, index_t e);
+
+	void insert_vertices_with_BRIO(
+	    const char* phase, const vector<index_t>& levels
 	);
 
-	void insert_vertices(index_t b, index_t e);
+        void check_volume();
 
-	void check_volume();
+        PeriodicDelaunay3dThread* thread(index_t t) {
+            geo_debug_assert(t < threads_.size());
+            return reinterpret_cast<PeriodicDelaunay3dThread*>(
+                threads_[t].get()
+            );
+        }
 
-	PeriodicDelaunay3dThread* thread(index_t t) {
-	    geo_debug_assert(t < threads_.size());
-	    return reinterpret_cast<PeriodicDelaunay3dThread*>(
-		threads_[t].get()
-	    );
-	}
+        index_t nb_threads() const {
+            return index_t(threads_.size());
+        }
 
-	index_t nb_threads() const {
-	    return index_t(threads_.size());
-	}
-	
+	void check_max_t();
+
     private:
         friend class PeriodicDelaunay3dThread;
-	
-	bool periodic_;
+
+        bool periodic_;
         vec3 period_;
-	
-	const double* weights_;
+
+        const double* weights_;
         vector<signed_index_t> cell_to_v_store_;
         vector<signed_index_t> cell_to_cell_store_;
         vector<index_t> cell_next_;
-        
+
         CellStatusArray cell_status_;
-        
+
         ThreadGroup threads_;
         vector<index_t> reorder_;
         vector<index_t> levels_;
 
-         bool debug_mode_;
+        bool debug_mode_;
 
-         bool verbose_debug_mode_;
+        bool verbose_debug_mode_;
 
         bool benchmark_mode_;
-        
 
-	vector<Numeric::uint32> vertex_instances_;
+        bool detailed_benchmark_mode_;
 
-	bool update_periodic_v_to_cell_;
-	vector<index_t> periodic_v_to_cell_rowptr_;
-	vector<index_t> periodic_v_to_cell_data_;
-	
-	bool has_empty_cells_;
+        vector<Numeric::uint32> vertex_instances_;
 
-	index_t nb_reallocations_;
+        bool update_periodic_v_to_cell_;
+        vector<index_t> periodic_v_to_cell_rowptr_;
+        vector<index_t> periodic_v_to_cell_data_;
 
-	bool convex_cell_exact_predicates_;
+        bool has_empty_cells_;
+
+        index_t nb_reallocations_;
+
+        bool convex_cell_exact_predicates_;
+
+	struct Stats {
+
+	    Stats();
+
+	    void reset();
+
+	    std::string to_string() {
+		return raw_ ? to_string_raw() : to_string_pretty();
+	    }
+
+	    std::string to_string_raw() const;
+	    std::string to_string_pretty() const;
+
+	    bool raw_;
+
+	    double  total_t_;
+
+	    double  phase_0_t_;
+
+	    double  phase_I_t_;
+	    double  phase_I_classify_t_;
+	    index_t phase_I_nb_inside_;
+	    index_t phase_I_nb_cross_;
+	    index_t phase_I_nb_outside_;
+	    double  phase_I_insert_t_;
+	    index_t phase_I_insert_nb_;
+
+	    double  phase_II_t_;
+	    double  phase_II_classify_t_;
+	    double  phase_II_insert_t_;
+	    index_t phase_II_insert_nb_;
+	} stats_;
+
+	friend class LaguerreDiagramOmegaSimple3d;
     };
-    
+
 
 }
 
@@ -10675,736 +10830,736 @@ namespace GEO {
 namespace GEO {
 
     struct CDT2d_ConstraintWalker;
-    
+
     class GEOGRAM_API CDTBase2d {
     public:
-        CDTBase2d();
+    CDTBase2d();
 
-        virtual ~CDTBase2d();
+    virtual ~CDTBase2d();
 
-        virtual void clear();
-        
-        void insert_constraint(index_t i, index_t j);
+    virtual void clear();
 
-        void remove_external_triangles(
-            bool remove_internal_holes=false
+    void insert_constraint(index_t i, index_t j);
+
+    void remove_external_triangles(
+        bool remove_internal_holes=false
+    );
+
+    void set_delaunay(bool delaunay) {
+        delaunay_ = delaunay;
+    }
+
+    index_t nT() const {
+        return T_.size()/3;
+    }
+
+    index_t nv() const {
+        return nv_;
+    }
+
+    index_t ncnstr() const {
+        return ncnstr_;
+    }
+
+    index_t Tv(index_t t, index_t lv) const {
+        geo_debug_assert(t<nT());
+        geo_debug_assert(lv<3);
+        return T_[3*t+lv];
+    }
+
+    index_t Tv_find(index_t t, index_t v) const {
+        geo_debug_assert(t<nT());
+        geo_debug_assert(v<nv());
+        return find_3(T_.data()+3*t, v);
+    }
+
+    index_t Tadj(index_t t, index_t le) const {
+        geo_debug_assert(t<nT());
+        geo_debug_assert(le<3);
+        return Tadj_[3*t+le];
+    }
+
+    index_t Tadj_find(index_t t1, index_t t2) const {
+        geo_debug_assert(t1<nT());
+        geo_debug_assert(t2<nT());
+        return find_3(Tadj_.data()+3*t1, t2);
+    }
+
+    index_t vT(index_t v) const {
+        geo_debug_assert(v < nv());
+        return v2T_[v];
+    }
+
+
+    index_t Tedge_cnstr_first(index_t t, index_t le) const {
+        geo_debug_assert(t < nT());
+        geo_debug_assert(le < 3);
+        return Tecnstr_first_[3*t+le];
+    }
+
+    index_t edge_cnstr_next(index_t ecit) const {
+        return ecnstr_next_[ecit];
+    }
+
+    index_t edge_cnstr(index_t ecit) const {
+        return ecnstr_val_[ecit];
+    }
+
+    index_t Tedge_cnstr_nb(index_t t, index_t le) const {
+        index_t result = 0;
+        for(
+            index_t ecit = Tedge_cnstr_first(t,le);
+            ecit != index_t(-1);
+            ecit = edge_cnstr_next(ecit)
+        ) {
+            ++result;
+        }
+        return result;
+    }
+
+
+    virtual void save(const std::string& filename) const = 0;
+
+    bool Tedge_is_Delaunay(index_t t, index_t le) const;
+
+    protected:
+    virtual void begin_insert_transaction();
+    virtual void commit_insert_transaction();
+    virtual void rollback_insert_transaction();
+
+    index_t insert(index_t v, index_t hint = index_t(-1));
+
+    void create_enclosing_triangle(index_t v1, index_t v2, index_t v3);
+
+    void create_enclosing_quad(
+        index_t v1, index_t v2, index_t v3, index_t v4
+    );
+
+    void Tset_flag(index_t t, index_t flag) {
+        geo_debug_assert(t < nT());
+        geo_debug_assert(flag < 8);
+        Tflags_[t] |= Numeric::uint8(1u << flag);
+    }
+
+    void Treset_flag(index_t t, index_t flag) {
+        geo_debug_assert(t < nT());
+        geo_debug_assert(flag < 8);
+        Tflags_[t] &= Numeric::uint8(~(1u << flag));
+    }
+
+    bool Tflag_is_set(index_t t, index_t flag) {
+        geo_debug_assert(t < nT());
+        geo_debug_assert(flag < 8);
+        return ((Tflags_[t] & (1u << flag)) != 0);
+    }
+
+    enum {
+        DLIST_S_ID=0,
+        DLIST_Q_ID=1,
+        DLIST_N_ID=2,
+        DLIST_NB=3
+    };
+
+    enum {
+        T_MARKED_FLAG  = DLIST_NB,
+        T_VISITED_FLAG = DLIST_NB+1
+    };
+
+    bool Tis_in_list(index_t t) const {
+        return (
+            (Tflags_[t] &
+             Numeric::uint8((1 << DLIST_NB)-1)
+            ) != 0
         );
+    }
 
-        void set_delaunay(bool delaunay) {
-            delaunay_ = delaunay;
-        }
-        
-        index_t nT() const {
-            return T_.size()/3;
-        }
-
-        index_t nv() const {
-            return nv_;
+    struct DList {
+        DList(CDTBase2d& cdt, index_t list_id) :
+            cdt_(cdt), list_id_(list_id),
+            back_(index_t(-1)), front_(index_t(-1)) {
+            geo_debug_assert(list_id < DLIST_NB);
         }
 
-        index_t ncnstr() const {
-            return ncnstr_;
-        }
-        
-        index_t Tv(index_t t, index_t lv) const {
-            geo_debug_assert(t<nT());
-            geo_debug_assert(lv<3);
-            return T_[3*t+lv];
+        DList(CDTBase2d& cdt) :
+            cdt_(cdt), list_id_(index_t(-1)),
+            back_(index_t(-1)), front_(index_t(-1)) {
         }
 
-        index_t Tv_find(index_t t, index_t v) const {
-            geo_debug_assert(t<nT());
-            geo_debug_assert(v<nv());
-            return find_3(T_.data()+3*t, v); 
-        }
-        
-        index_t Tadj(index_t t, index_t le) const {
-            geo_debug_assert(t<nT());
-            geo_debug_assert(le<3);
-            return Tadj_[3*t+le];
-        }
-        
-        index_t Tadj_find(index_t t1, index_t t2) const {
-            geo_debug_assert(t1<nT());
-            geo_debug_assert(t2<nT());
-            return find_3(Tadj_.data()+3*t1, t2); 
+        void initialize(index_t list_id) {
+            geo_debug_assert(!initialized());
+            geo_debug_assert(list_id < DLIST_NB);
+            list_id_ = list_id;
         }
 
-        index_t vT(index_t v) const {
-            geo_debug_assert(v < nv());
-            return v2T_[v];
+        bool initialized() const {
+            return (list_id_ != index_t(-1));
         }
 
-
-        index_t Tedge_cnstr_first(index_t t, index_t le) const {
-            geo_debug_assert(t < nT());
-            geo_debug_assert(le < 3);
-            return Tecnstr_first_[3*t+le];
+        ~DList() {
+            if(initialized()) {
+                clear();
+            }
         }
 
-        index_t edge_cnstr_next(index_t ecit) const {
-            return ecnstr_next_[ecit];
+        bool empty() const {
+            geo_debug_assert(initialized());
+            geo_debug_assert(
+                (back_==index_t(-1))==(front_==index_t(-1))
+            );
+            return (back_==index_t(-1));
         }
 
-        index_t edge_cnstr(index_t ecit) const {
-            return ecnstr_val_[ecit];
+        bool contains(index_t t) const {
+            geo_debug_assert(initialized());
+            return cdt_.Tflag_is_set(t, list_id_);
         }
 
-        index_t Tedge_cnstr_nb(index_t t, index_t le) const {
+        index_t front() const {
+            geo_debug_assert(initialized());
+            return front_;
+        }
+
+        index_t back() const {
+            geo_debug_assert(initialized());
+            return back_;
+        }
+
+        index_t next(index_t t) const {
+            geo_debug_assert(initialized());
+            geo_debug_assert(contains(t));
+            return cdt_.Tnext_[t];
+        }
+
+        index_t prev(index_t t) const {
+            geo_debug_assert(initialized());
+            geo_debug_assert(contains(t));
+            return cdt_.Tprev_[t];
+        }
+
+        void clear() {
+            for(index_t t=front_; t!=index_t(-1); t = cdt_.Tnext_[t]) {
+                cdt_.Treset_flag(t,list_id_);
+            }
+            back_ = index_t(-1);
+            front_ = index_t(-1);
+        }
+
+        index_t size() const {
+            geo_debug_assert(initialized());
             index_t result = 0;
-            for(
-                index_t ecit = Tedge_cnstr_first(t,le); 
-                ecit != index_t(-1);
-                ecit = edge_cnstr_next(ecit)
-            ) {
+            for(index_t t=front(); t!=index_t(-1); t = next(t)) {
                 ++result;
             }
             return result;
         }
 
-        
-        virtual void save(const std::string& filename) const = 0;
-
-        bool Tedge_is_Delaunay(index_t t, index_t le) const;
-
-    protected:
-        virtual void begin_insert_transaction();
-        virtual void commit_insert_transaction();
-        virtual void rollback_insert_transaction();
-    
-        index_t insert(index_t v, index_t hint = index_t(-1));
-
-        void create_enclosing_triangle(index_t v1, index_t v2, index_t v3);
-
-        void create_enclosing_quad(
-            index_t v1, index_t v2, index_t v3, index_t v4
-        );
-
-        void Tset_flag(index_t t, index_t flag) {
-            geo_debug_assert(t < nT());
-            geo_debug_assert(flag < 8);
-            Tflags_[t] |= Numeric::uint8(1u << flag);
+        void push_back(index_t t) {
+            geo_debug_assert(initialized());
+            geo_debug_assert(!cdt_.Tis_in_list(t));
+            cdt_.Tset_flag(t,list_id_);
+            if(empty()) {
+                back_ = t;
+                front_ = t;
+                cdt_.Tnext_[t] = index_t(-1);
+                cdt_.Tprev_[t] = index_t(-1);
+            } else {
+                cdt_.Tnext_[t] = index_t(-1);
+                cdt_.Tnext_[back_] = t;
+                cdt_.Tprev_[t] = back_;
+                back_ = t;
+            }
         }
 
-        void Treset_flag(index_t t, index_t flag) {
-            geo_debug_assert(t < nT());
-            geo_debug_assert(flag < 8);
-            Tflags_[t] &= Numeric::uint8(~(1u << flag));
-        }
-
-        bool Tflag_is_set(index_t t, index_t flag) {
-            geo_debug_assert(t < nT());
-            geo_debug_assert(flag < 8);
-            return ((Tflags_[t] & (1u << flag)) != 0);
-        }
-
-        enum {
-            DLIST_S_ID=0,
-            DLIST_Q_ID=1,
-            DLIST_N_ID=2,
-            DLIST_NB=3
-        };
-
-        enum {
-            T_MARKED_FLAG  = DLIST_NB,  
-            T_VISITED_FLAG = DLIST_NB+1 
-        };
-
-        bool Tis_in_list(index_t t) const {
-            return (
-                (Tflags_[t] &
-                 Numeric::uint8((1 << DLIST_NB)-1)
-                ) != 0
-            );
-        }
-
-        struct DList {
-            DList(CDTBase2d& cdt, index_t list_id) :
-                cdt_(cdt), list_id_(list_id),
-                back_(index_t(-1)), front_(index_t(-1)) {
-                geo_debug_assert(list_id < DLIST_NB);
-            }
-
-            DList(CDTBase2d& cdt) :
-                cdt_(cdt), list_id_(index_t(-1)),
-                back_(index_t(-1)), front_(index_t(-1)) {
-            }
-
-            void initialize(index_t list_id) {
-                geo_debug_assert(!initialized());
-                geo_debug_assert(list_id < DLIST_NB);
-                list_id_ = list_id;
-            }
-
-            bool initialized() const {
-                return (list_id_ != index_t(-1));
-            }
-            
-            ~DList() {
-                if(initialized()) {
-                    clear();
-                }
-            }
-
-            bool empty() const {
-                geo_debug_assert(initialized());
-                geo_debug_assert(
-                    (back_==index_t(-1))==(front_==index_t(-1))
-                );
-                return (back_==index_t(-1));
-            }
-
-            bool contains(index_t t) const {
-                geo_debug_assert(initialized());                
-                return cdt_.Tflag_is_set(t, list_id_);
-            }
-
-            index_t front() const {
-                geo_debug_assert(initialized());
-                return front_;
-            }
-            
-            index_t back() const {
-                geo_debug_assert(initialized());
-                return back_;
-            }
-            
-            index_t next(index_t t) const {
-                geo_debug_assert(initialized());
-                geo_debug_assert(contains(t));
-                return cdt_.Tnext_[t];
-            }
-            
-            index_t prev(index_t t) const {
-                geo_debug_assert(initialized());
-                geo_debug_assert(contains(t));
-                return cdt_.Tprev_[t];
-            }
-
-            void clear() {
-                for(index_t t=front_; t!=index_t(-1); t = cdt_.Tnext_[t]) {
-                    cdt_.Treset_flag(t,list_id_);
-                }
-                back_ = index_t(-1);
+        index_t pop_back() {
+            geo_debug_assert(initialized());
+            geo_debug_assert(!empty());
+            index_t t = back_;
+            back_ = cdt_.Tprev_[back_];
+            if(back_ == index_t(-1)) {
+                geo_debug_assert(front_ == t);
                 front_ = index_t(-1);
+            } else {
+                cdt_.Tnext_[back_] = index_t(-1);
             }
-
-            index_t size() const {
-                geo_debug_assert(initialized());
-                index_t result = 0;
-                for(index_t t=front(); t!=index_t(-1); t = next(t)) {
-                    ++result;
-                }
-                return result;
-            }
-        
-            void push_back(index_t t) {
-                geo_debug_assert(initialized());
-                geo_debug_assert(!cdt_.Tis_in_list(t));
-                cdt_.Tset_flag(t,list_id_);
-                if(empty()) {
-                    back_ = t;
-                    front_ = t;
-                    cdt_.Tnext_[t] = index_t(-1);
-                    cdt_.Tprev_[t] = index_t(-1);
-                } else {
-                    cdt_.Tnext_[t] = index_t(-1);
-                    cdt_.Tnext_[back_] = t;
-                    cdt_.Tprev_[t] = back_;
-                    back_ = t;
-                }
-            }
-
-            index_t pop_back() {
-                geo_debug_assert(initialized());
-                geo_debug_assert(!empty());
-                index_t t = back_;
-                back_ = cdt_.Tprev_[back_];
-                if(back_ == index_t(-1)) {
-                    geo_debug_assert(front_ == t);
-                    front_ = index_t(-1);
-                } else {
-                    cdt_.Tnext_[back_] = index_t(-1);
-                }
-                geo_debug_assert(contains(t));
-                cdt_.Treset_flag(t,list_id_);
-                return t;
-            }
-
-            void push_front(index_t t) {
-                geo_debug_assert(initialized());
-                geo_debug_assert(!cdt_.Tis_in_list(t));
-                cdt_.Tset_flag(t,list_id_);
-                if(empty()) {
-                    back_ = t;
-                    front_ = t;
-                    cdt_.Tnext_[t] = index_t(-1);
-                    cdt_.Tprev_[t] = index_t(-1);
-                } else {
-                    cdt_.Tprev_[t] = index_t(-1);
-                    cdt_.Tprev_[front_] = t;
-                    cdt_.Tnext_[t] = front_;
-                    front_ = t;
-                }
-            }
-
-            index_t pop_front() {
-                geo_debug_assert(initialized());
-                geo_debug_assert(!empty());
-                index_t t = front_;
-                front_ = cdt_.Tnext_[front_];
-                if(front_ == index_t(-1)) {
-                    geo_debug_assert(back_ == t);
-                    back_ = index_t(-1);
-                } else {
-                    cdt_.Tprev_[front_] = index_t(-1);
-                }
-                geo_debug_assert(contains(t));
-                cdt_.Treset_flag(t,list_id_);
-                return t;
-            }
-
-            void remove(index_t t) {
-                geo_debug_assert(initialized());
-                if(t == front_) {
-                    pop_front();
-                } else if(t == back_) {
-                    pop_back();
-                } else {
-                    geo_debug_assert(contains(t));
-                    index_t t_prev = cdt_.Tprev_[t];
-                    index_t t_next = cdt_.Tnext_[t];
-                    cdt_.Tprev_[t_next] = t_prev;
-                    cdt_.Tnext_[t_prev] = t_next;
-                    cdt_.Treset_flag(t,list_id_);
-                }
-            }
-
-            void show(std::ostream& out = std::cerr) const {
-                switch(list_id_) {
-                case DLIST_S_ID:
-                    out << "S";
-                    break;
-                case DLIST_Q_ID:
-                    out << "Q";
-                    break;
-                case DLIST_N_ID:
-                    out << "N";
-                    break;
-                case index_t(-1):
-                    out << "<uninitialized list>";
-                    break;
-                default:
-                    out << "<unknown list id:" << list_id_ << ">";
-                    break;
-                }
-                out << "=";
-                for(index_t t=front(); t!=index_t(-1); t = next(t)) {
-                    out << t << ";";
-                }
-                out << std::endl;
-            }
-
-        private:
-            CDTBase2d& cdt_;
-            index_t list_id_;
-            index_t back_;
-            index_t front_;
-        };
-
-        void insert_vertex_in_edge(index_t v, index_t t, index_t le, DList& S);
-
-        void insert_vertex_in_edge(index_t v, index_t t, index_t le) {
-            DList S(*this);
-            insert_vertex_in_edge(v,t,le,S);
-        }
-
-        void insert_vertex_in_triangle(index_t v, index_t t, DList& S);
-        
-        index_t find_intersected_edges(index_t i, index_t j, DList& Q);
-
-        void walk_constraint_v(CDT2d_ConstraintWalker& W);
-
-        void walk_constraint_t(CDT2d_ConstraintWalker& W, DList& Q);
-        
-        void constrain_edges(index_t i, index_t j, DList& Q, DList& N);
-
-        void Delaunayize_vertex_neighbors(index_t from_v);
-        
-        void Delaunayize_vertex_neighbors(index_t v, DList& S);
-        
-        void Delaunayize_new_edges(DList& N);
-
-        
-        void Tset(
-            index_t t,
-            index_t v1,   index_t v2,   index_t v3,
-            index_t adj1, index_t adj2, index_t adj3,
-            index_t e1cnstr = index_t(-1),
-            index_t e2cnstr = index_t(-1),
-            index_t e3cnstr = index_t(-1)            
-        ) {
-            geo_debug_assert(t < nT());
-            geo_debug_assert(v1 < nv());
-            geo_debug_assert(v2 < nv());
-            geo_debug_assert(v3 < nv());                        
-            geo_debug_assert(adj1 < nT() || adj1 == index_t(-1));
-            geo_debug_assert(adj2 < nT() || adj2 == index_t(-1));
-            geo_debug_assert(adj3 < nT() || adj3 == index_t(-1));
-            geo_debug_assert(v1 != v2);
-            geo_debug_assert(v2 != v3);
-            geo_debug_assert(v3 != v1);            
-            geo_debug_assert(adj1 != adj2 || adj1 == index_t(-1));
-            geo_debug_assert(adj2 != adj3 || adj2 == index_t(-1));
-            geo_debug_assert(adj3 != adj1 || adj3 == index_t(-1));
-            geo_debug_assert(orient2d(v1,v2,v3) != ZERO);
-            T_[3*t  ]    = v1;
-            T_[3*t+1]    = v2;
-            T_[3*t+2]    = v3;                        
-            Tadj_[3*t  ] = adj1;
-            Tadj_[3*t+1] = adj2;
-            Tadj_[3*t+2] = adj3;
-            Tecnstr_first_[3*t]   = e1cnstr;
-            Tecnstr_first_[3*t+1] = e2cnstr;
-            Tecnstr_first_[3*t+2] = e3cnstr;
-            v2T_[v1] = t;
-            v2T_[v2] = t;
-            v2T_[v3] = t;
-        }
-
-        void Trot(index_t t, index_t lv) {
-            geo_debug_assert(t < nT());
-            geo_debug_assert(lv < 3);
-            if(lv != 0) {
-                index_t i = 3*t+lv;
-                index_t j = 3*t+((lv+1)%3);
-                index_t k = 3*t+((lv+2)%3);
-                Tset(
-                    t,
-                    T_[i], T_[j], T_[k],
-                    Tadj_[i], Tadj_[j], Tadj_[k],
-                    Tecnstr_first_[i], Tecnstr_first_[j], Tecnstr_first_[k]
-                );
-            }
-        }
-
-        void swap_edge(index_t t1, bool swap_t1_t2=false);
-    
-        void Tadj_set(index_t t, index_t le, index_t adj) {
-            geo_debug_assert(t < nT());
-            geo_debug_assert(adj < nT());
-            geo_debug_assert(le < 3);
-            Tadj_[3*t+le] = adj;
-        }
-
-        index_t Topp(index_t t, index_t e=0) const {
-            index_t t2 = Tadj(t,e);
-            if(t2 == index_t(-1)) {
-                return index_t(-1);
-            }
-            index_t e2 = Tadj_find(t2,t);
-            return Tv(t2,e2);
-        }
-        
-        void Tadj_back_connect(
-            index_t t1, index_t le1, index_t prev_t2_adj_e2
-        ) {
-            geo_debug_assert(t1 < nT());
-            geo_debug_assert(le1 < 3);
-            index_t t2 = Tadj(t1,le1);
-            if(t2 == index_t(-1)) {
-                return;
-            }
-            index_t le2 = Tadj_find(t2,prev_t2_adj_e2);
-            Tadj_set(t2,le2,t1);
-            Tset_edge_cnstr_first(t1,le1,Tedge_cnstr_first(t2,le2)); 
-        }
-        
-        index_t Tnew() {
-            index_t t = nT();
-            index_t nc = (t+1)*3; // new number of corners
-            T_.resize(nc, index_t(-1));
-            Tadj_.resize(nc, index_t(-1));
-            Tecnstr_first_.resize(nc, index_t(-1));
-            Tflags_.resize(t+1,0);
-            Tnext_.resize(t+1,index_t(-1));
-            Tprev_.resize(t+1,index_t(-1));
+            geo_debug_assert(contains(t));
+            cdt_.Treset_flag(t,list_id_);
             return t;
         }
 
-        void Tset_edge_cnstr_first(
-            index_t t, index_t le, index_t ecit
-        ) {
-            geo_debug_assert(t < nT());
-            geo_debug_assert(le < 3);
-            Tecnstr_first_[3*t+le] = ecit;
-        }
-
-        void Tadd_edge_cnstr(
-            index_t t, index_t le, index_t cnstr_id
-        ) {
-            geo_debug_assert(t < nT());
-            geo_debug_assert(le < 3);
-            // Check whether the edge is already constrained with the
-            // same constraint.
-            // TODO (if possible): understand how this can happen and
-            // remove this bloc of code that is not super elegant
-            // (it seems to be when we arrive at j and coming from a vertex
-            // traversed by the edge, both conditions make the constraint
-            // added to the traversed edge).
-            for(
-                index_t ecit = Tedge_cnstr_first(t,le);
-                ecit != index_t(-1);
-                ecit = edge_cnstr_next(ecit)
-            ) {
-                if(edge_cnstr(ecit) == cnstr_id) {
-                    return;
-                }
-            }
-            ecnstr_val_.push_back(cnstr_id);
-            ecnstr_next_.push_back(Tedge_cnstr_first(t,le));
-            Tset_edge_cnstr_first(t,le, ecnstr_val_.size()-1); 
-        }
-
-        void Tadd_edge_cnstr_with_neighbor(
-            index_t t, index_t le, index_t cnstr_id
-        ) {
-            geo_debug_assert(t < nT());
-            geo_debug_assert(le < 3);
-#ifdef GEO_DEBUG
-            index_t t_e_cnstr_first = Tedge_cnstr_first(t,le);
-#endif            
-            Tadd_edge_cnstr(t, le, cnstr_id);
-            index_t t2 = Tadj(t,le);
-            if(t2 != index_t(-1)) {
-                index_t le2 = Tadj_find(t2,t);
-                // Sanity check: make sure the two edges always share the
-                // same constraint list.
-                geo_debug_assert(Tedge_cnstr_first(t2,le2) == t_e_cnstr_first);
-                Tset_edge_cnstr_first(t2,le2,Tedge_cnstr_first(t,le));
+        void push_front(index_t t) {
+            geo_debug_assert(initialized());
+            geo_debug_assert(!cdt_.Tis_in_list(t));
+            cdt_.Tset_flag(t,list_id_);
+            if(empty()) {
+                back_ = t;
+                front_ = t;
+                cdt_.Tnext_[t] = index_t(-1);
+                cdt_.Tprev_[t] = index_t(-1);
+            } else {
+                cdt_.Tprev_[t] = index_t(-1);
+                cdt_.Tprev_[front_] = t;
+                cdt_.Tnext_[t] = front_;
+                front_ = t;
             }
         }
-        
-        bool Tedge_is_constrained(index_t t, index_t le) const {
-            return (Tedge_cnstr_first(t,le) != index_t(-1));
+
+        index_t pop_front() {
+            geo_debug_assert(initialized());
+            geo_debug_assert(!empty());
+            index_t t = front_;
+            front_ = cdt_.Tnext_[front_];
+            if(front_ == index_t(-1)) {
+                geo_debug_assert(back_ == t);
+                back_ = index_t(-1);
+            } else {
+                cdt_.Tprev_[front_] = index_t(-1);
+            }
+            geo_debug_assert(contains(t));
+            cdt_.Treset_flag(t,list_id_);
+            return t;
         }
 
-        void for_each_T_around_v(
-            index_t v, std::function<bool(index_t t, index_t lv)> doit
+        void remove(index_t t) {
+            geo_debug_assert(initialized());
+            if(t == front_) {
+                pop_front();
+            } else if(t == back_) {
+                pop_back();
+            } else {
+                geo_debug_assert(contains(t));
+                index_t t_prev = cdt_.Tprev_[t];
+                index_t t_next = cdt_.Tnext_[t];
+                cdt_.Tprev_[t_next] = t_prev;
+                cdt_.Tnext_[t_prev] = t_next;
+                cdt_.Treset_flag(t,list_id_);
+            }
+        }
+
+        void show(std::ostream& out = std::cerr) const {
+            switch(list_id_) {
+            case DLIST_S_ID:
+                out << "S";
+                break;
+            case DLIST_Q_ID:
+                out << "Q";
+                break;
+            case DLIST_N_ID:
+                out << "N";
+                break;
+            case index_t(-1):
+                out << "<uninitialized list>";
+                break;
+            default:
+                out << "<unknown list id:" << list_id_ << ">";
+                break;
+            }
+            out << "=";
+            for(index_t t=front(); t!=index_t(-1); t = next(t)) {
+                out << t << ";";
+            }
+            out << std::endl;
+        }
+
+    private:
+        CDTBase2d& cdt_;
+        index_t list_id_;
+        index_t back_;
+        index_t front_;
+    };
+
+    void insert_vertex_in_edge(index_t v, index_t t, index_t le, DList& S);
+
+    void insert_vertex_in_edge(index_t v, index_t t, index_t le) {
+        DList S(*this);
+        insert_vertex_in_edge(v,t,le,S);
+    }
+
+    void insert_vertex_in_triangle(index_t v, index_t t, DList& S);
+
+    index_t find_intersected_edges(index_t i, index_t j, DList& Q);
+
+    void walk_constraint_v(CDT2d_ConstraintWalker& W);
+
+    void walk_constraint_t(CDT2d_ConstraintWalker& W, DList& Q);
+
+    void constrain_edges(index_t i, index_t j, DList& Q, DList& N);
+
+    void Delaunayize_vertex_neighbors(index_t from_v);
+
+    void Delaunayize_vertex_neighbors(index_t v, DList& S);
+
+    void Delaunayize_new_edges(DList& N);
+
+
+    void Tset(
+        index_t t,
+        index_t v1,   index_t v2,   index_t v3,
+        index_t adj1, index_t adj2, index_t adj3,
+        index_t e1cnstr = index_t(-1),
+        index_t e2cnstr = index_t(-1),
+        index_t e3cnstr = index_t(-1)
+    ) {
+        geo_debug_assert(t < nT());
+        geo_debug_assert(v1 < nv());
+        geo_debug_assert(v2 < nv());
+        geo_debug_assert(v3 < nv());
+        geo_debug_assert(adj1 < nT() || adj1 == index_t(-1));
+        geo_debug_assert(adj2 < nT() || adj2 == index_t(-1));
+        geo_debug_assert(adj3 < nT() || adj3 == index_t(-1));
+        geo_debug_assert(v1 != v2);
+        geo_debug_assert(v2 != v3);
+        geo_debug_assert(v3 != v1);
+        geo_debug_assert(adj1 != adj2 || adj1 == index_t(-1));
+        geo_debug_assert(adj2 != adj3 || adj2 == index_t(-1));
+        geo_debug_assert(adj3 != adj1 || adj3 == index_t(-1));
+        geo_debug_assert(orient2d(v1,v2,v3) != ZERO);
+        T_[3*t  ]    = v1;
+        T_[3*t+1]    = v2;
+        T_[3*t+2]    = v3;
+        Tadj_[3*t  ] = adj1;
+        Tadj_[3*t+1] = adj2;
+        Tadj_[3*t+2] = adj3;
+        Tecnstr_first_[3*t]   = e1cnstr;
+        Tecnstr_first_[3*t+1] = e2cnstr;
+        Tecnstr_first_[3*t+2] = e3cnstr;
+        v2T_[v1] = t;
+        v2T_[v2] = t;
+        v2T_[v3] = t;
+    }
+
+    void Trot(index_t t, index_t lv) {
+        geo_debug_assert(t < nT());
+        geo_debug_assert(lv < 3);
+        if(lv != 0) {
+            index_t i = 3*t+lv;
+            index_t j = 3*t+((lv+1)%3);
+            index_t k = 3*t+((lv+2)%3);
+            Tset(
+                t,
+                T_[i], T_[j], T_[k],
+                Tadj_[i], Tadj_[j], Tadj_[k],
+                Tecnstr_first_[i], Tecnstr_first_[j], Tecnstr_first_[k]
+            );
+        }
+    }
+
+    void swap_edge(index_t t1, bool swap_t1_t2=false);
+
+    void Tadj_set(index_t t, index_t le, index_t adj) {
+        geo_debug_assert(t < nT());
+        geo_debug_assert(adj < nT());
+        geo_debug_assert(le < 3);
+        Tadj_[3*t+le] = adj;
+    }
+
+    index_t Topp(index_t t, index_t e=0) const {
+        index_t t2 = Tadj(t,e);
+        if(t2 == index_t(-1)) {
+            return index_t(-1);
+        }
+        index_t e2 = Tadj_find(t2,t);
+        return Tv(t2,e2);
+    }
+
+    void Tadj_back_connect(
+        index_t t1, index_t le1, index_t prev_t2_adj_e2
+    ) {
+        geo_debug_assert(t1 < nT());
+        geo_debug_assert(le1 < 3);
+        index_t t2 = Tadj(t1,le1);
+        if(t2 == index_t(-1)) {
+            return;
+        }
+        index_t le2 = Tadj_find(t2,prev_t2_adj_e2);
+        Tadj_set(t2,le2,t1);
+        Tset_edge_cnstr_first(t1,le1,Tedge_cnstr_first(t2,le2));
+    }
+
+    index_t Tnew() {
+        index_t t = nT();
+        index_t nc = (t+1)*3; // new number of corners
+        T_.resize(nc, index_t(-1));
+        Tadj_.resize(nc, index_t(-1));
+        Tecnstr_first_.resize(nc, index_t(-1));
+        Tflags_.resize(t+1,0);
+        Tnext_.resize(t+1,index_t(-1));
+        Tprev_.resize(t+1,index_t(-1));
+        return t;
+    }
+
+    void Tset_edge_cnstr_first(
+        index_t t, index_t le, index_t ecit
+    ) {
+        geo_debug_assert(t < nT());
+        geo_debug_assert(le < 3);
+        Tecnstr_first_[3*t+le] = ecit;
+    }
+
+    void Tadd_edge_cnstr(
+        index_t t, index_t le, index_t cnstr_id
+    ) {
+        geo_debug_assert(t < nT());
+        geo_debug_assert(le < 3);
+        // Check whether the edge is already constrained with the
+        // same constraint.
+        // TODO (if possible): understand how this can happen and
+        // remove this bloc of code that is not super elegant
+        // (it seems to be when we arrive at j and coming from a vertex
+        // traversed by the edge, both conditions make the constraint
+        // added to the traversed edge).
+        for(
+            index_t ecit = Tedge_cnstr_first(t,le);
+            ecit != index_t(-1);
+            ecit = edge_cnstr_next(ecit)
         ) {
-            index_t t = vT(v);
-            index_t lv = index_t(-1);
-            do {
-                lv = Tv_find(t,v);
-                if(doit(t,lv)) {
-                    return;
-                }
-                t = Tadj(t, (lv+1)%3);
-            } while(t != vT(v) && t != index_t(-1));
-            
-            // We are done, this was an interior vertex
-            if(t != index_t(-1)) {
+            if(edge_cnstr(ecit) == cnstr_id) {
                 return;
             }
-            
-            // It was a vertex on the border, so we need
-            // to traverse the triangle fan in the other
-            // direction until we reach the border again
-            t = vT(v);
+        }
+        ecnstr_val_.push_back(cnstr_id);
+        ecnstr_next_.push_back(Tedge_cnstr_first(t,le));
+        Tset_edge_cnstr_first(t,le, ecnstr_val_.size()-1);
+    }
+
+    void Tadd_edge_cnstr_with_neighbor(
+        index_t t, index_t le, index_t cnstr_id
+    ) {
+        geo_debug_assert(t < nT());
+        geo_debug_assert(le < 3);
+#ifdef GEO_DEBUG
+        index_t t_e_cnstr_first = Tedge_cnstr_first(t,le);
+#endif
+        Tadd_edge_cnstr(t, le, cnstr_id);
+        index_t t2 = Tadj(t,le);
+        if(t2 != index_t(-1)) {
+            index_t le2 = Tadj_find(t2,t);
+            // Sanity check: make sure the two edges always share the
+            // same constraint list.
+            geo_debug_assert(Tedge_cnstr_first(t2,le2) == t_e_cnstr_first);
+            Tset_edge_cnstr_first(t2,le2,Tedge_cnstr_first(t,le));
+        }
+    }
+
+    bool Tedge_is_constrained(index_t t, index_t le) const {
+        return (Tedge_cnstr_first(t,le) != index_t(-1));
+    }
+
+    void for_each_T_around_v(
+        index_t v, std::function<bool(index_t t, index_t lv)> doit
+    ) {
+        index_t t = vT(v);
+        index_t lv = index_t(-1);
+        do {
             lv = Tv_find(t,v);
-            t = Tadj(t, (lv+2)%3);
-            while(t != index_t(-1)) {
-                lv = Tv_find(t,v);
-                if(doit(t,lv)) {
-                    return;
-                }
-                t = Tadj(t, (lv+2)%3);
-            }
-        }
-
-        
-        index_t locate(
-            index_t v, index_t hint = index_t(-1), Sign* orient = nullptr
-        ) const;
-        
-        bool is_convex_quad(index_t t) const;
-
-        virtual Sign orient2d(index_t i,index_t j,index_t k) const=0;
-
-        virtual Sign incircle(index_t i,index_t j,index_t k,index_t l) const=0;
-
-        virtual index_t create_intersection(
-            index_t E1, index_t i, index_t j,
-            index_t E2, index_t k, index_t l
-        ) = 0;
-
-        static inline index_t find_3(const index_t* T, index_t v) {
-            // The following expression is 10% faster than using
-            // if() statements. This uses the C++ norm, that 
-            // ensures that the 'true' boolean value converted to 
-            // an int is always 1. With most compilers, this avoids 
-            // generating branching instructions.
-            // Thank to Laurent Alonso for this idea.
-            index_t result = index_t( (T[1] == v) | ((T[2] == v) * 2) );
-            // Sanity check, important if it was T[0], not explicitly
-            // tested (detects input that does not meet the precondition).
-            geo_debug_assert(T[result] == v);
-            return result; 
-        }
-
-        
-
-        void remove_marked_triangles();
-        
-        
-
-        void Tcheck(index_t t) const {
-            if(t == index_t(-1)) {
+            if(doit(t,lv)) {
                 return;
             }
-            for(index_t e=0; e<3; ++e) {
-                geo_assert(Tv(t,e) != Tv(t,(e+1)%3));
-                if(Tadj(t,e) == index_t(-1)) {
-                    continue;
-                }
-                geo_assert(Tadj(t,e) != Tadj(t,(e+1)%3));
-                index_t t2 = Tadj(t,e);
-                index_t e2 = Tadj_find(t2,t);
-                geo_assert(Tadj(t2,e2) == t);
-            }
+            t = Tadj(t, (lv+1)%3);
+        } while(t != vT(v) && t != index_t(-1));
+
+        // We are done, this was an interior vertex
+        if(t != index_t(-1)) {
+            return;
         }
 
-        void debug_Tcheck(index_t t) const {
+        // It was a vertex on the border, so we need
+        // to traverse the triangle fan in the other
+        // direction until we reach the border again
+        t = vT(v);
+        lv = Tv_find(t,v);
+        t = Tadj(t, (lv+2)%3);
+        while(t != index_t(-1)) {
+            lv = Tv_find(t,v);
+            if(doit(t,lv)) {
+                return;
+            }
+            t = Tadj(t, (lv+2)%3);
+        }
+    }
+
+
+    index_t locate(
+        index_t v, index_t hint = index_t(-1), Sign* orient = nullptr
+    ) const;
+
+    bool is_convex_quad(index_t t) const;
+
+    virtual Sign orient2d(index_t i,index_t j,index_t k) const=0;
+
+    virtual Sign incircle(index_t i,index_t j,index_t k,index_t l) const=0;
+
+    virtual index_t create_intersection(
+        index_t E1, index_t i, index_t j,
+        index_t E2, index_t k, index_t l
+    ) = 0;
+
+    static inline index_t find_3(const index_t* T, index_t v) {
+        // The following expression is 10% faster than using
+        // if() statements. This uses the C++ norm, that
+        // ensures that the 'true' boolean value converted to
+        // an int is always 1. With most compilers, this avoids
+        // generating branching instructions.
+        // Thank to Laurent Alonso for this idea.
+        index_t result = index_t( (T[1] == v) | ((T[2] == v) * 2) );
+        // Sanity check, important if it was T[0], not explicitly
+        // tested (detects input that does not meet the precondition).
+        geo_debug_assert(T[result] == v);
+        return result;
+    }
+
+    
+
+    void remove_marked_triangles();
+
+    
+
+    void Tcheck(index_t t) const {
+        if(t == index_t(-1)) {
+            return;
+        }
+        for(index_t e=0; e<3; ++e) {
+            geo_assert(Tv(t,e) != Tv(t,(e+1)%3));
+            if(Tadj(t,e) == index_t(-1)) {
+                continue;
+            }
+            geo_assert(Tadj(t,e) != Tadj(t,(e+1)%3));
+            index_t t2 = Tadj(t,e);
+            index_t e2 = Tadj_find(t2,t);
+            geo_assert(Tadj(t2,e2) == t);
+        }
+    }
+
+    void debug_Tcheck(index_t t) const {
 #ifdef GEO_DEBUG
-            Tcheck(t);
+        Tcheck(t);
 #else
-            geo_argused(t);
-#endif            
-        }
-        
-        void check_combinatorics() const {
-            for(index_t t=0; t<nT(); ++t) {
-                Tcheck(t);
-            }
-        }
+        geo_argused(t);
+#endif
+    }
 
-        void debug_check_combinatorics() const {
-#ifdef GEO_DEBUG 
-            check_combinatorics();
-#endif            
+    void check_combinatorics() const {
+        for(index_t t=0; t<nT(); ++t) {
+            Tcheck(t);
         }
+    }
 
-        virtual void check_geometry() const;
-        
-        void debug_check_geometry() const {
-#ifdef GEO_DEBUG 
-            check_geometry();
-#endif            
-        }
+    void debug_check_combinatorics() const {
+#ifdef GEO_DEBUG
+        check_combinatorics();
+#endif
+    }
+
+    virtual void check_geometry() const;
+
+    void debug_check_geometry() const {
+#ifdef GEO_DEBUG
+        check_geometry();
+#endif
+    }
 
 
     public:
-        void check_consistency() const {
-            check_combinatorics();
-            check_geometry();
-        }
+    void check_consistency() const {
+        check_combinatorics();
+        check_geometry();
+    }
 
     protected:
-        void debug_check_consistency() const {
-            debug_check_combinatorics();
-            debug_check_geometry();
+    void debug_check_consistency() const {
+        debug_check_combinatorics();
+        debug_check_geometry();
+    }
+
+    bool segment_segment_intersect(
+        index_t u1, index_t u2, index_t v1, index_t v2
+    ) const {
+        if(orient2d(u1,u2,v1)*orient2d(u1,u2,v2) > 0) {
+            return false;
         }
-        
-        bool segment_segment_intersect(
-            index_t u1, index_t u2, index_t v1, index_t v2
-        ) const {
-            if(orient2d(u1,u2,v1)*orient2d(u1,u2,v2) > 0) {
+        return (orient2d(v1,v2,u1)*orient2d(v1,v2,u2) < 0);
+    }
+
+    bool segment_edge_intersect(
+        index_t v1, index_t v2, index_t t, index_t le
+    ) const {
+        index_t u1 = Tv(t,(le + 1)%3);
+        index_t u2 = Tv(t,(le + 2)%3);
+        return segment_segment_intersect(u1,u2,v1,v2);
+    }
+
+    void check_edge_intersections(
+        index_t v1, index_t v2, const DList& Q
+    );
+
+    typedef std::pair<index_t, index_t> Edge;
+
+    index_t eT(Edge E) {
+        index_t v1 = E.first;
+        index_t v2 = E.second;
+        index_t result = index_t(-1);
+        for_each_T_around_v(
+            v1, [&](index_t t, index_t lv)->bool {
+                if(Tv(t, (lv+1)%3) == v2) {
+                    if(Tv(t, (lv+2)%3) != v1) {
+                        Trot(t, (lv+2)%3);
+                    }
+                    result = t;
+                    return true;
+                } else if(Tv(t, (lv+1)%3) == v1) {
+                    if(Tv(t, (lv+2)%3) != v2) {
+                        Trot(t, (lv+2)%3);
+                    }
+                    result = t;
+                    return true;
+                }
                 return false;
             }
-            return (orient2d(v1,v2,u1)*orient2d(v1,v2,u2) < 0);
-        }
-        
-        bool segment_edge_intersect(
-            index_t v1, index_t v2, index_t t, index_t le
-        ) const {
-            index_t u1 = Tv(t,(le + 1)%3);
-            index_t u2 = Tv(t,(le + 2)%3);
-            return segment_segment_intersect(u1,u2,v1,v2);
-        }
-
-        void check_edge_intersections(
-            index_t v1, index_t v2, const DList& Q
         );
-
-        typedef std::pair<index_t, index_t> Edge;
-        
-        index_t eT(Edge E) {
-            index_t v1 = E.first;
-            index_t v2 = E.second;
-            index_t result = index_t(-1);
-            for_each_T_around_v(
-                v1, [&](index_t t, index_t lv)->bool {
-                    if(Tv(t, (lv+1)%3) == v2) {
-                        if(Tv(t, (lv+2)%3) != v1) {
-                            Trot(t, (lv+2)%3);
-                        }
-                        result = t;
-                        return true;
-                    } else if(Tv(t, (lv+1)%3) == v1) {
-                        if(Tv(t, (lv+2)%3) != v2) {
-                            Trot(t, (lv+2)%3);
-                        }
-                        result = t;                    
-                        return true;
-                    }
-                    return false;
-                }
-            );
-            geo_debug_assert(result != index_t(-1));
-            geo_debug_assert(
-                (Tv(result,1) == v1 && Tv(result,2) == v2) ||
-                (Tv(result,1) == v2 && Tv(result,2) == v1) 
-            );
-            return result;
-        }
-
-        index_t locate_naive(
-            index_t v, index_t hint = index_t(-1), Sign* orient = nullptr
-        ) const;
-        
-        void constrain_edges_naive(
-            index_t i, index_t j, DList& Q, vector<Edge>& N
+        geo_debug_assert(result != index_t(-1));
+        geo_debug_assert(
+            (Tv(result,1) == v1 && Tv(result,2) == v2) ||
+            (Tv(result,1) == v2 && Tv(result,2) == v1)
         );
+        return result;
+    }
 
-        void Delaunayize_new_edges_naive(vector<Edge>& N);
+    index_t locate_naive(
+        index_t v, index_t hint = index_t(-1), Sign* orient = nullptr
+    ) const;
+
+    void constrain_edges_naive(
+        index_t i, index_t j, DList& Q, vector<Edge>& N
+    );
+
+    void Delaunayize_new_edges_naive(vector<Edge>& N);
 
     protected:
-        index_t nv_;
-        index_t ncnstr_;
-        vector<index_t> T_;        
-        vector<index_t> Tadj_;     
-        vector<index_t> v2T_;      
-        vector<uint8_t> Tflags_;   
-        vector<index_t> Tecnstr_first_;  
-        vector<index_t> ecnstr_val_;     
-        vector<index_t> ecnstr_next_;    
-        vector<index_t> Tnext_;    
-        vector<index_t> Tprev_;    
-        bool delaunay_;            
-        Sign orient_012_;          
-        bool exact_incircle_;      
-        bool exact_intersections_; 
+    index_t nv_;
+    index_t ncnstr_;
+    vector<index_t> T_;        
+    vector<index_t> Tadj_;     
+    vector<index_t> v2T_;      
+    vector<uint8_t> Tflags_;   
+    vector<index_t> Tecnstr_first_;  
+    vector<index_t> ecnstr_val_;     
+    vector<index_t> ecnstr_next_;    
+    vector<index_t> Tnext_;    
+    vector<index_t> Tprev_;    
+    bool delaunay_;            
+    Sign orient_012_;          
+    bool exact_incircle_;      
+    bool exact_intersections_; 
     };
 
     
-    
+
     class GEOGRAM_API CDT2d: public CDTBase2d {
     public:
 
         CDT2d();
-        
+
         ~CDT2d() override;
-        
+
         void clear() override;
 
         void create_enclosing_triangle(
@@ -11426,9 +11581,9 @@ namespace GEO {
                 vec2(x1,y2)
             );
         }
-        
+
         index_t insert(const vec2& p, index_t hint = index_t(-1)) {
-            debug_check_consistency();            
+            debug_check_consistency();
             point_.push_back(p);
             index_t v = CDTBase2d::insert(point_.size()-1, hint);
             // If inserted point already existed in
@@ -11436,7 +11591,7 @@ namespace GEO {
             if(point_.size() > nv()) {
                 point_.pop_back();
             }
-            debug_check_consistency();                        
+            debug_check_consistency();
             return v;
         }
 
@@ -11445,7 +11600,7 @@ namespace GEO {
             index_t* indices = nullptr,
             bool remove_unreferenced_vertices = false
         );
-        
+
         void save(const std::string& filename) const override;
 
         const vec2 point(index_t v) const {
@@ -11462,7 +11617,7 @@ namespace GEO {
             index_t E1, index_t i, index_t j,
             index_t E2, index_t k, index_t l
         ) override;
-        
+
     protected:
         vector<vec2> point_;
     };
@@ -11476,7 +11631,7 @@ namespace GEO {
         ExactCDT2d();
 
         ~ExactCDT2d() override;
-        
+
         void clear() override;
 
         index_t insert(
@@ -11488,7 +11643,7 @@ namespace GEO {
             cnstr_operand_bits_.push_back(operand_bits);
             CDTBase2d::insert_constraint(v1,v2);
         }
-        
+
         void create_enclosing_quad(
             const ExactPoint& p1, const ExactPoint& p2,
             const ExactPoint& p3, const ExactPoint& p4
@@ -11525,13 +11680,13 @@ namespace GEO {
         );
 
         void save(const std::string& filename) const override;
-        
+
     protected:
         void add_point(const ExactPoint& p, index_t id = index_t(-1));
         void begin_insert_transaction() override;
         void commit_insert_transaction() override;
         void rollback_insert_transaction() override;
-        
+
         Sign orient2d(index_t i, index_t j, index_t k) const override;
 
         Sign incircle(index_t i,index_t j,index_t k,index_t l) const override;
@@ -11540,12 +11695,12 @@ namespace GEO {
             index_t E1, index_t i, index_t j,
             index_t E2, index_t k, index_t l
         ) override;
-        
+
     protected:
         vector<ExactPoint> point_;
-#ifndef GEOGRAM_USE_EXACT_NT            
+#ifndef GEOGRAM_USE_EXACT_NT
         vector<double> length_;
-#endif        
+#endif
         vector<index_t> id_;
         vector<index_t> cnstr_operand_bits_;
         vector<index_t> facet_inclusion_bits_;
@@ -11554,9 +11709,9 @@ namespace GEO {
         mutable std::vector<std::pair<trindex, Sign>> pred_cache_insert_buffer_;
         vector<bindex> constraints_;
     };
+
     
-    
-    
+
 }
 
 #endif
@@ -11592,15 +11747,15 @@ namespace GEO {
         ) const = 0;
 
 
-	struct KeepInitialValues {
-	};
+        struct KeepInitialValues {
+        };
 
         virtual void get_nearest_neighbors(
             index_t nb_neighbors,
             const double* query_point,
             index_t* neighbors,
             double* neighbors_sq_dist,
-	    KeepInitialValues dummy
+            KeepInitialValues dummy
         ) const;
 
         virtual void get_nearest_neighbors(
@@ -11656,14 +11811,13 @@ namespace GEO {
     typedef SmartPointer<NearestNeighborSearch> NearestNeighborSearch_var;
 
     typedef Factory1<NearestNeighborSearch, coord_index_t>
-        NearestNeighborSearchFactory;
+    NearestNeighborSearchFactory;
 
-#define geo_register_NearestNeighborSearch_creator(type, name) \
+#define geo_register_NearestNeighborSearch_creator(type, name)          \
     geo_register_creator(GEO::NearestNeighborSearchFactory, type, name)
 }
 
 #endif
-
 
 /******* extracted from ../points/kd_tree.h *******/
 
@@ -11677,20 +11831,20 @@ namespace GEO {
 
     class GEOGRAM_API KdTree : public NearestNeighborSearch {
     public:
-	KdTree(coord_index_t dim);
+        KdTree(coord_index_t dim);
 
-	
+        
         void set_points(index_t nb_points, const double* points) override;
 
-		
+        
         bool stride_supported() const override;
 
-	
+        
         void set_points(
             index_t nb_points, const double* points, index_t stride
         ) override;
 
-	
+        
         void get_nearest_neighbors(
             index_t nb_neighbors,
             const double* query_point,
@@ -11698,114 +11852,114 @@ namespace GEO {
             double* neighbors_sq_dist
         ) const override;
 
-	
+        
         void get_nearest_neighbors(
             index_t nb_neighbors,
             const double* query_point,
             index_t* neighbors,
             double* neighbors_sq_dist,
-	    KeepInitialValues
+            KeepInitialValues
         ) const override;
 
-		
+        
         void get_nearest_neighbors(
             index_t nb_neighbors,
             index_t query_point,
             index_t* neighbors,
             double* neighbors_sq_dist
         ) const override;
-	
-	
-	
+
+        
+
         struct NearestNeighbors {
 
             NearestNeighbors(
                 index_t nb_neighbors_in,
-		index_t* user_neighbors_in,
-		double* user_neighbors_sq_dist_in,
+                index_t* user_neighbors_in,
+                double* user_neighbors_sq_dist_in,
                 index_t* work_neighbors_in,
                 double* work_neighbors_sq_dist_in
             ) :
                 nb_neighbors(0),
-		nb_neighbors_max(nb_neighbors_in),
+                nb_neighbors_max(nb_neighbors_in),
                 neighbors(work_neighbors_in),
-		neighbors_sq_dist(work_neighbors_sq_dist_in),
-	        user_neighbors(user_neighbors_in),
+                neighbors_sq_dist(work_neighbors_sq_dist_in),
+                user_neighbors(user_neighbors_in),
                 user_neighbors_sq_dist(user_neighbors_sq_dist_in),
-	        nb_visited(0)
-	    {
-		// Yes, '<=' because we got space for n+1 neigbors
-		// in the work arrays.
-		for(index_t i = 0; i <= nb_neighbors; ++i) {
-		    neighbors[i] = index_t(-1);
-		    neighbors_sq_dist[i] = Numeric::max_float64();
-		}
-            }
-	    
+                nb_visited(0)
+                {
+                    // Yes, '<=' because we got space for n+1 neigbors
+                    // in the work arrays.
+                    for(index_t i = 0; i <= nb_neighbors; ++i) {
+                        neighbors[i] = index_t(-1);
+                        neighbors_sq_dist[i] = Numeric::max_float64();
+                    }
+                }
+
             double furthest_neighbor_sq_dist() const {
                 return
-		    nb_neighbors == nb_neighbors_max ?
-		    neighbors_sq_dist[nb_neighbors - 1] :
-		    Numeric::max_float64()
-		    ;
+                    nb_neighbors == nb_neighbors_max ?
+                    neighbors_sq_dist[nb_neighbors - 1] :
+                    Numeric::max_float64()
+                    ;
             }
 
             void insert(
                 index_t neighbor, double sq_dist
             ) {
-		geo_debug_assert(
-		    sq_dist <= furthest_neighbor_sq_dist()
-		);
+                geo_debug_assert(
+                    sq_dist <= furthest_neighbor_sq_dist()
+                );
 
-		int i;
-		for(i=int(nb_neighbors); i>0; --i) {
-		    if(neighbors_sq_dist[i - 1] < sq_dist) {
-			break;
-		    } 
-		    neighbors[i] = neighbors[i - 1];
-		    neighbors_sq_dist[i] = neighbors_sq_dist[i - 1];
-		}
+                int i;
+                for(i=int(nb_neighbors); i>0; --i) {
+                    if(neighbors_sq_dist[i - 1] < sq_dist) {
+                        break;
+                    }
+                    neighbors[i] = neighbors[i - 1];
+                    neighbors_sq_dist[i] = neighbors_sq_dist[i - 1];
+                }
 
                 neighbors[i] = neighbor;
                 neighbors_sq_dist[i] = sq_dist;
 
-		if(nb_neighbors < nb_neighbors_max) {
-		    ++nb_neighbors;
-		}
+                if(nb_neighbors < nb_neighbors_max) {
+                    ++nb_neighbors;
+                }
             }
 
-	    void copy_from_user() {
-		for(index_t i=0; i<nb_neighbors_max; ++i) {
-		    neighbors[i] = user_neighbors[i];
-		    neighbors_sq_dist[i] = user_neighbors_sq_dist[i];
-		}
-		neighbors[nb_neighbors_max] = index_t(-1);
-		neighbors_sq_dist[nb_neighbors_max] = Numeric::max_float64();
-		nb_neighbors = nb_neighbors_max;
-	    }
+            void copy_from_user() {
+                for(index_t i=0; i<nb_neighbors_max; ++i) {
+                    neighbors[i] = user_neighbors[i];
+                    neighbors_sq_dist[i] = user_neighbors_sq_dist[i];
+                }
+                neighbors[nb_neighbors_max] = index_t(-1);
+                neighbors_sq_dist[nb_neighbors_max] = Numeric::max_float64();
+                nb_neighbors = nb_neighbors_max;
+            }
 
-	    void copy_to_user() {
-		for(index_t i=0; i<nb_neighbors_max; ++i) {
-		    user_neighbors[i] = neighbors[i];
-		    user_neighbors_sq_dist[i] = neighbors_sq_dist[i];
-		}
-	    }
+            void copy_to_user() {
+                for(index_t i=0; i<nb_neighbors_max; ++i) {
+                    user_neighbors[i] = neighbors[i];
+                    user_neighbors_sq_dist[i] = neighbors_sq_dist[i];
+                }
+            }
 
-	    
-	    index_t nb_neighbors;
+            
+            index_t nb_neighbors;
 
-	    
-	    index_t nb_neighbors_max;
+            
+            index_t nb_neighbors_max;
 
             index_t* neighbors;
 
             double* neighbors_sq_dist;
 
-	    index_t* user_neighbors;
+            index_t* user_neighbors;
 
-	    double* user_neighbors_sq_dist;
+            double* user_neighbors_sq_dist;
 
-	    size_t nb_visited;
+            size_t nb_visited;
         };
 
         virtual void get_nearest_neighbors_recursive(
@@ -11815,66 +11969,66 @@ namespace GEO {
             NearestNeighbors& neighbors
         ) const;
 
-	void init_bbox_and_bbox_dist_for_traversal(
-	    double* bbox_min, double* bbox_max,
-	    double& box_dist, const double* query_point
-	) const;
+        void init_bbox_and_bbox_dist_for_traversal(
+            double* bbox_min, double* bbox_max,
+            double& box_dist, const double* query_point
+        ) const;
 
-	index_t root() const {
-	    return root_;
-	}
-	
+        index_t root() const {
+            return root_;
+        }
+
     protected:
-        static const index_t MAX_LEAF_SIZE = 16;
+        static constexpr index_t MAX_LEAF_SIZE = 16;
 
-	virtual index_t build_tree() = 0 ;
+        virtual index_t build_tree() = 0 ;
 
-	virtual void get_node(
-	    index_t n, index_t b, index_t e,
-	    index_t& left_child, index_t& right_child,
-	    coord_index_t&  splitting_coord,
-	    index_t& m,
-	    double& splitting_val
-	) const = 0;
-	
+        virtual void get_node(
+            index_t n, index_t b, index_t e,
+            index_t& left_child, index_t& right_child,
+            coord_index_t&  splitting_coord,
+            index_t& m,
+            double& splitting_val
+        ) const = 0;
 
 
-	virtual void get_nearest_neighbors_leaf(
+
+        virtual void get_nearest_neighbors_leaf(
             index_t node_index, index_t b, index_t e,
-	    const double* query_point,
-            NearestNeighbors& neighbors	    
-	) const;
+            const double* query_point,
+            NearestNeighbors& neighbors
+        ) const;
 
-	void get_minmax(
-	    index_t b, index_t e, coord_index_t coord,
-	    double& minval, double& maxval
-	) const {
-	    minval = Numeric::max_float64();
-	    maxval = Numeric::min_float64();
-	    for(index_t i = b; i < e; ++i) {
-		double val = point_ptr(point_index_[i])[coord];
-		minval = std::min(minval, val);
-		maxval = std::max(maxval, val);
-	    }
-	}
+        void get_minmax(
+            index_t b, index_t e, coord_index_t coord,
+            double& minval, double& maxval
+        ) const {
+            minval = Numeric::max_float64();
+            maxval = Numeric::min_float64();
+            for(index_t i = b; i < e; ++i) {
+                double val = point_ptr(point_index_[i])[coord];
+                minval = std::min(minval, val);
+                maxval = std::max(maxval, val);
+            }
+        }
 
-	double spread(index_t b, index_t e, coord_index_t coord) const {
-	    double minval,maxval;
-	    get_minmax(b,e,coord,minval,maxval);
-	    return maxval - minval;
-	}
+        double spread(index_t b, index_t e, coord_index_t coord) const {
+            double minval,maxval;
+            get_minmax(b,e,coord,minval,maxval);
+            return maxval - minval;
+        }
 
-	~KdTree() override;
+        ~KdTree() override;
 
-      protected:
+    protected:
         vector<index_t> point_index_;
         vector<double> bbox_min_;
         vector<double> bbox_max_;
-	index_t root_;
+        index_t root_;
     };
 
     
-    
+
     class GEOGRAM_API BalancedKdTree : public KdTree {
     public:
         BalancedKdTree(coord_index_t dim);
@@ -11912,20 +12066,20 @@ namespace GEO {
             index_t node_index, index_t b, index_t e
         );
 
-	
-	index_t build_tree() override;
+        
+        index_t build_tree() override;
 
-	
-	void get_node(
-	    index_t n, index_t b, index_t e,
-	    index_t& left_child, index_t& right_child,
-	    coord_index_t&  splitting_coord,
-	    index_t& m,
-	    double& splitting_val
-	) const override;
-	
+        
+        void get_node(
+            index_t n, index_t b, index_t e,
+            index_t& left_child, index_t& right_child,
+            coord_index_t&  splitting_coord,
+            index_t& m,
+            double& splitting_val
+        ) const override;
+
     protected:
-	
+
         vector<coord_index_t> splitting_coord_;
 
         vector<double> splitting_val_;
@@ -11939,63 +12093,62 @@ namespace GEO {
     public:
         AdaptiveKdTree(coord_index_t dim);
 
-    protected:	
-	
-	index_t build_tree() override;
+    protected:
+        
+        index_t build_tree() override;
 
-	
-	void get_node(
-	    index_t n, index_t b, index_t e,
-	    index_t& left_child, index_t& right_child,
-	    coord_index_t&  splitting_coord,
-	    index_t& m,
-	    double& splitting_val
-	) const override;
+        
+        void get_node(
+            index_t n, index_t b, index_t e,
+            index_t& left_child, index_t& right_child,
+            coord_index_t&  splitting_coord,
+            index_t& m,
+            double& splitting_val
+        ) const override;
 
         virtual index_t create_kd_tree_recursive(
-	    index_t b, index_t e,
-            double* bbox_min, double* bbox_max	    	    
-	);
+            index_t b, index_t e,
+            double* bbox_min, double* bbox_max
+        );
 
         virtual void split_kd_node(
             index_t b, index_t e,
             double* bbox_min, double* bbox_max,
-	    index_t& m, coord_index_t& cut_dim, double& cut_val
+            index_t& m, coord_index_t& cut_dim, double& cut_val
         );
 
-	virtual void plane_split(
-	    index_t b, index_t e, coord_index_t coord, double val,
-	    index_t& br1, index_t& br2
-	);
+        virtual void plane_split(
+            index_t b, index_t e, coord_index_t coord, double val,
+            index_t& br1, index_t& br2
+        );
 
-	double point_coord(int index, coord_index_t coord) {
-	    geo_debug_assert(index >= 0);
-	    geo_debug_assert(index_t(index) < nb_points());
-	    geo_debug_assert(coord < dimension());
-	    index_t direct_index = point_index_[index_t(index)];
-	    geo_debug_assert(direct_index < nb_points());
-	    return (points_ + direct_index * stride_)[coord];
-	}
-	
-	
-	index_t nb_nodes() const {
-	    return splitting_coord_.size();
-	}
+        double point_coord(int index, coord_index_t coord) {
+            geo_debug_assert(index >= 0);
+            geo_debug_assert(index_t(index) < nb_points());
+            geo_debug_assert(coord < dimension());
+            index_t direct_index = point_index_[index_t(index)];
+            geo_debug_assert(direct_index < nb_points());
+            return (points_ + direct_index * stride_)[coord];
+        }
 
-	virtual index_t new_node();
-	
-     protected:
-	vector<coord_index_t> splitting_coord_;
+
+        index_t nb_nodes() const {
+            return splitting_coord_.size();
+        }
+
+        virtual index_t new_node();
+
+    protected:
+        vector<coord_index_t> splitting_coord_;
 
         vector<double> splitting_val_;
 
-	vector<index_t> node_m_;
-	
-	vector<index_t> node_right_child_;
+        vector<index_t> node_m_;
+
+        vector<index_t> node_right_child_;
     };
+
     
-        
 }
 
 #endif
-
