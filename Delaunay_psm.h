@@ -261,7 +261,7 @@ namespace GEO {
 #  error "Unsupported compiler"
 #endif
 
-#if defined(__x86_64) || defined(__ppc64__) || defined(__arm64__) || defined(__aarch64__) || (defined(__riscv) && __riscv_xlen == 64)
+#if defined(__x86_64) || defined(__ppc64__) || defined(__arm64__) || defined(__aarch64__) || (defined(__riscv) && __riscv_xlen == 64) || defined(__loongarch_lp64)
 #  define GEO_ARCH_64
 #else
 #  define GEO_ARCH_32
@@ -1937,7 +1937,7 @@ namespace GEO {
                         // that can initialize std::atomic through its
                         // non-default constructor. We'll need to do something
                         // else when we'll switch to C++20 (placement new...)
-                        std::atomic_init(&spinlocks_[i],0u);
+                        std::atomic_init<uint32_t>(&spinlocks_[i],0u);
                     }
                 }
 // Test at compile time that we are using atomic uint32_t operations (and not
@@ -4709,6 +4709,11 @@ namespace GEO {
 
     typedef vecng<4, Numeric::int32> vec4i;
 
+    typedef vecng<2, Numeric::uint32> vec2u;
+
+    typedef vecng<3, Numeric::uint32> vec3u;
+
+    typedef vecng<4, Numeric::uint32> vec4u;
 
     typedef Matrix<2, Numeric::float64> mat2;
 

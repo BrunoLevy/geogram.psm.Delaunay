@@ -5112,8 +5112,8 @@ namespace {
     class FileSystemRootNode : public FileSystem::Node {
     public:
         bool is_file(const std::string& path) override {
-            WIN32_FIND_DATA file;
-            HANDLE file_handle = FindFirstFile(path.c_str(), &file);
+            WIN32_FIND_DATAA file;
+            HANDLE file_handle = FindFirstFileA(path.c_str(), &file);
             if(file_handle == INVALID_HANDLE_VALUE) {
                 return false;
             }
@@ -5122,8 +5122,8 @@ namespace {
         }
 
         bool is_directory(const std::string& path) override {
-            WIN32_FIND_DATA file;
-            HANDLE file_handle = FindFirstFile(path.c_str(), &file);
+            WIN32_FIND_DATAA file;
+            HANDLE file_handle = FindFirstFileA(path.c_str(), &file);
             if(file_handle == INVALID_HANDLE_VALUE) {
                 return false;
             }
@@ -5154,7 +5154,7 @@ namespace {
                     continue;
                 }
                 if(!is_directory(current)) {
-                    if(!::CreateDirectory(current.c_str(), nullptr)) {
+                    if(!::CreateDirectoryA(current.c_str(), nullptr)) {
                         Logger::err("OS")
                             << "Could not create directory "
                             << current << std::endl;
@@ -5166,11 +5166,11 @@ namespace {
         }
 
         bool delete_directory(const std::string& path) override {
-            return ::RemoveDirectory(path.c_str()) != FALSE;
+            return ::RemoveDirectoryA(path.c_str()) != FALSE;
         }
 
         bool delete_file(const std::string& path) override {
-            return ::DeleteFile(path.c_str()) != FALSE;
+            return ::DeleteFileA(path.c_str()) != FALSE;
         }
 
         bool get_directory_entries(
@@ -5190,8 +5190,8 @@ namespace {
                 return false;
             }
 
-            WIN32_FIND_DATA file;
-            HANDLE file_handle = FindFirstFile("*.*", &file);
+            WIN32_FIND_DATAA file;
+            HANDLE file_handle = FindFirstFileA("*.*", &file);
             if(file_handle != INVALID_HANDLE_VALUE) {
                 do {
                     std::string file_name = file.cFileName;
@@ -5200,7 +5200,7 @@ namespace {
                         flip_slashes(file_name);
                         result.push_back(file_name);
                     }
-                } while(FindNextFile(file_handle, &file));
+                } while(FindNextFileA(file_handle, &file));
                 FindClose(file_handle);
             }
             set_current_working_directory(current_directory);
@@ -5210,7 +5210,7 @@ namespace {
         std::string get_current_working_directory() override {
             char buf[2048];
             std::string result = "";
-            if(GetCurrentDirectory(sizeof(buf), buf)) {
+            if(GetCurrentDirectoryA(sizeof(buf), buf)) {
                 result = buf;
                 flip_slashes(result);
             }
@@ -5226,7 +5226,7 @@ namespace {
                 path.at(path.size() - 1) != '\\') {
                 path += "/";
             }
-            return SetCurrentDirectory(path.c_str()) != -1;
+            return SetCurrentDirectoryA(path.c_str()) != -1;
         }
 
         bool rename_file(
@@ -5237,7 +5237,7 @@ namespace {
 
         Numeric::uint64 get_time_stamp(const std::string& path) override {
             WIN32_FILE_ATTRIBUTE_DATA infos;
-            if(!GetFileAttributesEx(
+            if(!GetFileAttributesExA(
                    path.c_str(), GetFileExInfoStandard, &infos)
               ) {
                 return 0;
@@ -5251,7 +5251,7 @@ namespace {
         }
 
         bool touch(const std::string& filename) override {
-            HANDLE hfile = CreateFile(
+            HANDLE hfile = CreateFileA(
                 filename.c_str(),
                 GENERIC_READ | GENERIC_WRITE,
                 FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -5282,8 +5282,8 @@ namespace {
             }
             std::string path = path_in;
             std::string result;
-            TCHAR buffer[MAX_PATH];
-            GetFullPathName(path.c_str(), MAX_PATH, buffer, nullptr);
+            char buffer[MAX_PATH];
+            GetFullPathNameA(path.c_str(), MAX_PATH, buffer, nullptr);
             result = std::string(buffer);
             flip_slashes(result);
             return result;
@@ -8488,8 +8488,8 @@ namespace GEO {
 #endif
 
         std::string os_executable_filename() {
-            TCHAR result[MAX_PATH];
-            GetModuleFileName( nullptr, result, MAX_PATH);
+            char result[MAX_PATH];
+            GetModuleFileNameA( nullptr, result, MAX_PATH);
             return std::string(result);
         }
 
@@ -28458,7 +28458,6 @@ namespace VBW {
     
 
     void ConvexCell::save(const std::string& filename, double shrink) const {
-        std::cerr << "====> Saving " << filename << std::endl;
         std::ofstream out(filename.c_str());
         save(out, 1, shrink);
     }
@@ -29839,13 +29838,13 @@ namespace {
 
 
 
+// These two functions are missing when compiling in PSM mode.
 #ifdef GEOGRAM_PSM
     namespace GEO {
 	namespace PCK {
 	    inline Sign det_3d(const vec3& p0, const vec3& p1, const vec3& p2) {
 		return det_3d(p0.data(), p1.data(), p2.data());
 	    }
-
 	    inline Sign det_4d(
 		const vec4& p0, const vec4& p1,	const vec4& p2, const vec4& p3
 	    ) {
@@ -32850,7 +32849,7 @@ namespace GEO {
 	// - copy_Laguerre_facet_from()
 
         // Local tet vertex indices from facet and vertex in facet indices.
-	// Carefully chosen in such a way that f[(lv+1)%3][2] == lv
+	// Carefully chosen in such a way that f[(lv+1)%4][2] == lv
 	// This is used in the code block below, that handles tets with
 	// a vertex at infinity
         static GEO::index_t fv[4][3] = {
