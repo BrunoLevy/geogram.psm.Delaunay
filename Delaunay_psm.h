@@ -271,6 +271,8 @@ namespace GEO {
 
 #elif defined(__EMSCRIPTEN__)
 
+#include <emscripten.h>
+
 #define GEO_OS_UNIX
 #define GEO_OS_LINUX
 #define GEO_OS_EMSCRIPTEN
@@ -334,6 +336,12 @@ namespace GEO {
 
 #ifndef GEO_NOEXCEPT
 #define GEO_NOEXCEPT throw()
+#endif
+
+#if defined(GOMGEN)
+#define GEO_NODISCARD
+#else
+#define GEO_NODISCARD [[nodiscard]]
 #endif
 
 #define FOR(I,UPPERBND) for(index_t I = 0; I<index_t(UPPERBND); ++I)
@@ -459,6 +467,7 @@ namespace GEO {
 #include <algorithm> // for std::min / std::max
 #include <stdint.h>
 #include <limits>
+#include <type_traits>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -476,16 +485,16 @@ namespace GEO {
         POSITIVE = 1
     };
 
-    template <class T>
-    inline Sign geo_sgn(const T& x) {
-        return (x > 0) ? POSITIVE : (
-            (x < 0) ? NEGATIVE : ZERO
-        );
-    }
 
     template <class T>
     inline Sign geo_cmp(const T& a, const T& b) {
-        return Sign((a > b) * POSITIVE + (a < b) * NEGATIVE);
+        return Sign((a > b) - (a < b));
+    }
+
+
+    template <class T>
+    inline Sign geo_sgn(const T& x) {
+        return geo_cmp(x, T(0));
     }
 
     namespace Numeric {
@@ -635,6 +644,13 @@ namespace GEO {
     static constexpr index_t NO_INDEX = index_t(-1);
 
     
+
+    template <class T> struct is_scalar {
+	typedef typename std::is_arithmetic<T>::type type;
+	static constexpr bool value = std::is_arithmetic<T>::value;
+    };
+
+    
 }
 
 #endif
@@ -697,6 +713,9 @@ namespace GEO {
         typedef byte* pointer;
 
         
+        typedef const byte* const_pointer;
+
+        
         typedef void (*function_pointer)();
 
         inline void clear(void* addr, size_t size) {
@@ -707,9 +726,8 @@ namespace GEO {
             ::memcpy(to, from, size);
         }
 
-        inline pointer function_pointer_to_generic_pointer(
-            function_pointer fptr
-        ) {
+	template <class FPTR=function_pointer>
+	inline pointer function_pointer_to_generic_pointer(FPTR fptr) {
             // I know this is ugly, but I did not find a simpler warning-free
             // way that is portable between all compilers.
             pointer result = nullptr;
@@ -717,23 +735,49 @@ namespace GEO {
             return result;
         }
 
-        inline function_pointer generic_pointer_to_function_pointer(
-            pointer ptr
-        ) {
+        template <class FPTR = function_pointer>
+	inline FPTR generic_pointer_to_function_pointer(pointer ptr) {
             // I know this is ugly, but I did not find a simpler warning-free
             // way that is portable between all compilers.
-            function_pointer result = nullptr;
+            FPTR result = nullptr;
             ::memcpy(&result, &ptr, sizeof(pointer));
             return result;
         }
 
-        inline function_pointer generic_pointer_to_function_pointer(void* ptr) {
+        template <class FPTR = function_pointer>
+        inline FPTR generic_pointer_to_function_pointer(void* ptr) {
             // I know this is ugly, but I did not find a simpler warning-free
             // way that is portable between all compilers.
-            function_pointer result = nullptr;
+            FPTR result = nullptr;
             ::memcpy(&result, &ptr, sizeof(pointer));
             return result;
         }
+
+
+	template <class T> inline T& pointer_as_reference(void* ptr) {
+	    // This is the recommended way of converting between pointers
+	    // of different types. Casting the pointer directly is undefined
+	    // behavior. Note: the call to memcpy() is eliminated by the
+	    // compiler (that generates the same thing as when casting the
+	    // pointer).
+	    T* T_ptr;
+	    ::memcpy(&T_ptr, &ptr, sizeof(pointer));
+	    return *T_ptr;
+	}
+
+	template <class T> inline const T& pointer_as_reference(
+	    const void* ptr
+	) {
+	    // This is the recommended way of converting between pointers
+	    // of different types. Casting the pointer directly is undefined
+	    // behavior. Note: the call to memcpy() is eliminated by the
+	    // compiler (that generates the same thing as when casting the
+	    // pointer).
+	    const T* T_ptr;
+	    ::memcpy(&T_ptr, &ptr, sizeof(pointer));
+	    return *T_ptr;
+	}
+
 
 #define GEO_MEMORY_ALIGNMENT 64
 
@@ -902,8 +946,17 @@ namespace GEO {
             template <class U>
             struct rebind {
                 
-                typedef aligned_allocator<U> other;
+                typedef aligned_allocator<U,ALIGN> other;
             };
+
+            /* \brief default constructor */
+            constexpr aligned_allocator() noexcept = default;
+
+            /* \brief conversion copy constructor */
+            template <class U, int A2> constexpr aligned_allocator(
+		const aligned_allocator<U, A2>&
+	    ) noexcept {
+	    }
 
             pointer address(reference x) {
                 return &x;
@@ -959,10 +1012,8 @@ namespace GEO {
             }
 
             void destroy(pointer p) {
+		geo_argused(p); // else MSVC complains
                 p->~value_type();
-#ifdef GEO_COMPILER_MSVC
-                (void) p; // to avoid a "unreferenced variable" warning
-#endif
             }
 
             template <class T2, int A2> operator aligned_allocator<T2, A2>() {
@@ -1268,32 +1319,44 @@ namespace GEO {
     };
 
     template <class T1, class T2>
-    inline bool operator== (const SmartPointer<T1>& lhs, const SmartPointer<T2>& rhs) {
+    inline bool operator== (
+	const SmartPointer<T1>& lhs, const SmartPointer<T2>& rhs
+    ) {
         return lhs.get() == rhs.get();
     }
 
     template <class T1, class T2>
-    inline bool operator!= (const SmartPointer<T1>& lhs, const SmartPointer<T2>& rhs) {
+    inline bool operator!= (
+	const SmartPointer<T1>& lhs, const SmartPointer<T2>& rhs
+    ) {
         return lhs.get() != rhs.get();
     }
 
     template <class T1, class T2>
-    inline bool operator< (const SmartPointer<T1>& lhs, const SmartPointer<T2>& rhs) {
+    inline bool operator< (
+	const SmartPointer<T1>& lhs, const SmartPointer<T2>& rhs
+    ) {
         return lhs.get() < rhs.get();
     }
 
     template <class T1, class T2>
-    inline bool operator<= (const SmartPointer<T1>& lhs, const SmartPointer<T2>& rhs) {
+    inline bool operator<= (
+	const SmartPointer<T1>& lhs, const SmartPointer<T2>& rhs
+    ) {
         return lhs.get() <= rhs.get();
     }
 
     template <class T1, class T2>
-    inline bool operator> (const SmartPointer<T1>& lhs, const SmartPointer<T2>& rhs) {
+    inline bool operator> (
+	const SmartPointer<T1>& lhs, const SmartPointer<T2>& rhs
+    ) {
         return lhs.get() > rhs.get();
     }
 
     template <class T1, class T2>
-    inline bool operator>= (const SmartPointer<T1>& lhs, const SmartPointer<T2>& rhs) {
+    inline bool operator>= (
+	const SmartPointer<T1>& lhs, const SmartPointer<T2>& rhs
+    ) {
         return lhs.get() >= rhs.get();
     }
 }
@@ -2516,6 +2579,13 @@ namespace GEO {
 #include <typeinfo>
 
 
+
+// Latest clang complains too often about empty \par statements in documentation
+#ifdef GEO_COMPILER_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdocumentation"
+#endif
+
 namespace GEO {
 
     class GEOGRAM_API InstanceRepo {
@@ -2633,7 +2703,9 @@ namespace GEO {
         typedef Factory<FactoryCreator1<Type, Param1> > BaseClass;
 
     public:
-        static Type* create_object(const std::string& name, const Param1& param1) {
+        static Type* create_object(
+	    const std::string& name, const Param1& param1
+	) {
             typename BaseClass::CreatorType creator =
                 BaseClass::find_creator(name);
             return creator == nullptr ? nullptr : (* creator)(param1);
@@ -2645,6 +2717,11 @@ namespace GEO {
     CPP_CONCAT(Factory_register_creator_, __LINE__) (name);             \
     geo_argused(CPP_CONCAT(Factory_register_creator_, __LINE__))
 }
+
+
+#ifdef GEO_COMPILER_CLANG
+#pragma clang diagnostic pop
+#endif
 
 #endif
 
@@ -3067,6 +3144,12 @@ namespace GEO {
 
     
 
+    
+    template <class T> struct is_scalar<rationalg<T> > {
+	typedef rationalg<T> type;
+	static constexpr bool value = true;
+    };
+
 }
 
 #endif
@@ -3081,6 +3164,10 @@ namespace GEO {
 #include <iostream>
 #include <cfloat>
 #include <cmath>
+
+#ifndef GOMGEN
+#include <type_traits>
+#endif
 
 
 namespace GEO {
@@ -3234,14 +3321,6 @@ namespace GEO {
             return result;
         }
 
-        template <class T2>
-        inline vector_type operator* (T2 s) const {
-            vector_type result(*this);
-            for(index_t i = 0; i < DIM; i++) {
-                result.data_[i] *= T(s);
-            }
-            return result;
-        }
 
         template <class T2>
         inline vector_type operator/ (T2 s) const {
@@ -3275,8 +3354,11 @@ namespace GEO {
         return result;
     }
 
-    template <class T2, index_t DIM, class T>
-    inline vecng<DIM, T> operator* (
+#ifndef GOMGEN
+    template <
+	class T2, index_t DIM, class T,
+	typename = std::enable_if_t<is_scalar<T2>::value>
+    > inline vecng<DIM, T> operator* (
         T2 s, const vecng<DIM, T>& v
     ) {
         vecng<DIM, T> result;
@@ -3285,6 +3367,21 @@ namespace GEO {
         }
         return result;
     }
+
+
+    template <
+	class T2, index_t DIM, class T,
+	typename = std::enable_if_t<is_scalar<T2>::value>
+    > inline vecng<DIM, T> operator* (
+        const vecng<DIM, T>& v, T2 s
+    ) {
+        vecng<DIM, T> result;
+        for(index_t i = 0; i < DIM; i++) {
+            result[i] = T(s) * v[i];
+        }
+        return result;
+    }
+#endif
 
     // Compatibility with GLSL
 
@@ -3312,7 +3409,7 @@ namespace GEO {
         return v2.distance(v1);
     }
 
-    template <index_t DIM, class T>
+    template <index_t DIM, class T> GEO_NODISCARD
     inline vecng<DIM, T> normalize(
         const vecng<DIM, T>& v
     ) {
@@ -3350,10 +3447,18 @@ namespace GEO {
             y(0) {
         }
 
-        vecng(T x_in, T y_in) :
+        vecng(const T& x_in, const T& y_in) :
             x(x_in),
             y(y_in) {
         }
+
+        vecng(T&& x_in, T&& y_in) :
+            x(x_in),
+            y(y_in) {
+        }
+
+	vecng(const vecng<2,T>& rhs) = default;
+	vecng(vecng<2,T>&& rhs) = default;
 
         
         template <class T2>
@@ -3378,6 +3483,9 @@ namespace GEO {
                 ++i;
             }
         }
+
+	vecng<2,T>& operator=(const vecng<2,T>& rhs) = default;
+	vecng<2,T>& operator=(vecng<2,T>&& rhs) = default;
 
         
         inline T length2() const {
@@ -3439,12 +3547,6 @@ namespace GEO {
         
         inline vector_type operator- (const vector_type& v) const {
             return vector_type(x - v.x, y - v.y);
-        }
-
-        
-        template <class T2>
-        inline vector_type operator* (T2 s) const {
-            return vector_type(x * T(s), y * T(s));
         }
 
         
@@ -3511,12 +3613,25 @@ namespace GEO {
         return v1.x * v2.y - v1.y * v2.x;
     }
 
-    template <class T2, class T>
-    inline vecng<2, T> operator* (
+#ifndef GOMGEN
+    template <
+	class T2, class T,
+	typename = std::enable_if_t<is_scalar<T2>::value>
+    > inline vecng<2, T> operator* (
         T2 s, const vecng<2, T>& v
     ) {
         return vecng<2, T>(T(s) * v.x, T(s) * v.y);
     }
+
+    template <
+	class T2, class T,
+	typename = std::enable_if_t<is_scalar<T2>::value>
+    > inline vecng<2, T> operator* (
+        const vecng<2, T>& v, T2 s
+    ) {
+        return vecng<2, T>(T(s) * v.x, T(s) * v.y);
+    }
+#endif
 
     
 
@@ -3539,11 +3654,20 @@ namespace GEO {
             z(T(0.0)) {
         }
 
-        vecng(T x_in, T y_in, T z_in) :
+        vecng(const T& x_in, const T& y_in, const T& z_in) :
             x(x_in),
             y(y_in),
             z(z_in) {
         }
+
+        vecng(T&& x_in, T&& y_in, T&& z_in) :
+            x(x_in),
+            y(y_in),
+            z(z_in) {
+        }
+
+	vecng(const vecng<3,T>& rhs) = default;
+	vecng(vecng<3,T>&& rhs) = default;
 
         
         template <class T2>
@@ -3570,6 +3694,21 @@ namespace GEO {
                 ++i;
             }
         }
+
+	vecng<3,T>& operator=(const vecng<3,T>& rhs) = default;
+	vecng<3,T>& operator=(vecng<3,T>&& rhs) = default;
+
+        template<typename A, typename B>
+        vecng(const vecng<2, A>& _xy, B _z);
+        template<typename A, typename B>
+        vecng(const vecng<2, A>& _xy, const vecng<1, B>& _z);
+        template<typename A, typename B>
+        vecng(A _x, const vecng<2, B>& _yz);
+        template<typename A, typename B>
+        vecng(const vecng<1, A>& _x, const vecng<2, B>& _yz);
+        template<typename U>
+        explicit vecng(vecng<4, U> const& v);
+
 
         
         inline T length2() const {
@@ -3636,12 +3775,6 @@ namespace GEO {
         
         inline vector_type operator- (const vector_type& v) const {
             return vector_type(x - v.x, y - v.y, z - v.z);
-        }
-
-        
-        template <class T2>
-        inline vector_type operator* (T2 s) const {
-            return vector_type(x * T(s), y * T(s), z * T(s));
         }
 
         
@@ -3715,12 +3848,26 @@ namespace GEO {
         );
     }
 
-    template <class T2, class T>
-    inline vecng<3, T> operator* (
+#ifndef GOMGEN
+    template <
+	class T2, class T,
+	typename = std::enable_if_t<is_scalar<T2>::value>
+    > inline vecng<3, T> operator* (
         T2 s, const vecng<3, T>& v
     ) {
         return vecng<3, T>(T(s) * v.x, T(s) * v.y, T(s) * v.z);
     }
+
+    template <
+	class T2, class T,
+	typename = std::enable_if_t<is_scalar<T2>::value>
+    > inline vecng<3, T> operator* (
+        const vecng<3, T>& v, T2 s
+    ) {
+        return vecng<3, T>(T(s) * v.x, T(s) * v.y, T(s) * v.z);
+    }
+
+#endif
 
     
 
@@ -3744,12 +3891,22 @@ namespace GEO {
             w(0) {
         }
 
-        vecng(T x_in, T y_in, T z_in, T w_in) :
+        vecng(const T& x_in, const T& y_in, const T& z_in, const T& w_in) :
             x(x_in),
             y(y_in),
             z(z_in),
             w(w_in) {
         }
+
+        vecng(T&& x_in, T&& y_in, T&& z_in, T&& w_in) :
+            x(x_in),
+            y(y_in),
+            z(z_in),
+            w(w_in) {
+        }
+
+	vecng(const vecng<4,T>& rhs) = default;
+	vecng(vecng<4,T>&& rhs) = default;
 
         
         template <class T2>
@@ -3778,6 +3935,105 @@ namespace GEO {
                 ++i;
             }
         }
+
+	vecng<4,T>& operator=(const vecng<4,T>& rhs) = default;
+	vecng<4,T>& operator=(vecng<4,T>&& rhs) = default;
+
+        // -- Conversion scalar constructors --
+
+        template<typename U>
+        explicit vecng(vecng<1, U> const& v);
+
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(X _x, Y _y, Z _z, W _w);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(const vecng<1, X>& _x, Y _y, Z _z, W _w);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(X _x, const vecng<1, Y>& _y, Z _z, W _w);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(const vecng<1, X>& _x, const vecng<1, Y>& _y, Z _z, W _w);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(X _x, Y _y, const vecng<1, Z>& _z, W _w);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(const vecng<1, X>& _x, Y _y, const vecng<1, Z>& _z, W _w);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(X _x, const vecng<1, Y>& _y, const vecng<1, Z>& _z, W _w);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(
+	    const vecng<1, X>& _x, const vecng<1, Y>& _y,
+	    const vecng<1, Z>& _z, W _w
+	);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(const vecng<1, X>& _x, Y _y, Z _z, const vecng<1, W>& _w);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(X _x, const vecng<1, Y>& _y, Z _z, const vecng<1, W>& _w);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(
+	    const vecng<1, X>& _x, const vecng<1, Y>& _y, Z _z,
+	    const vecng<1, W>& _w
+	);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(X _x, Y _y, const vecng<1, Z>& _z, const vecng<1, W>& _w);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(
+	    const vecng<1, X>& _x, Y _y, const vecng<1, Z>& _z,
+	    const vecng<1, W>& _w
+	);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(
+	    X _x, const vecng<1, Y>& _y, const vecng<1, Z>& _z,
+	    const vecng<1, W>& _w
+	);
+        template<typename X, typename Y, typename Z, typename W>
+        vecng(
+	    const vecng<1, X>& _x, const vecng<1, Y>& _y,
+	    const vecng<1, Z>& _z, const vecng<1, W>& _w
+	);
+
+        // -- Conversion vector constructors --
+
+        template<typename A, typename B, typename C>
+        vecng(const vecng<2, A>& _xy, B _z, C _w);
+        template<typename A, typename B, typename C>
+        vecng(const vecng<2, A>& _xy, const vecng<1, B> & _z, C _w);
+        template<typename A, typename B, typename C>
+        vecng(const vecng<2, A>& _xy, B _z, const vecng<1, C>& _w);
+        template<typename A, typename B, typename C>
+        vecng(
+	    const vecng<2, A>& _xy,  const vecng<1, B>& _z,
+	    const vecng<1, C>& _w
+	);
+        template<typename A, typename B, typename C>
+        vecng(A _x, const vecng<2, B>& _yz, C _w);
+        template<typename A, typename B, typename C>
+        vecng(const vecng<1, A>& _x, const vecng<2, B>& _yz, C _w);
+        template<typename A, typename B, typename C>
+        vecng(A _x, const vecng<2, B>& _yz, const vecng<1, C>& _w);
+        template<typename A, typename B, typename C>
+        vecng(
+	    const vecng<1, A>& _x, const vecng<2, B>& _yz,
+	    const vecng<1, C>& _w
+	);
+        template<typename A, typename B, typename C>
+        vecng(A _x, B _y, const vecng<2, C>& _zw);
+        template<typename A, typename B, typename C>
+        vecng(const vecng<1, A>& _x, B _y, const vecng<2, C>& _zw);
+        template<typename A, typename B, typename C>
+        vecng(A _x, const vecng<1, B>& _y, const vecng<2, C>& _zw);
+        template<typename A, typename B, typename C>
+        vecng(
+	    const vecng<1, A>& _x, const vecng<1, B>& _y, const vecng<2, C>& _zw
+	);
+        template<typename A, typename B>
+        vecng(const vecng<3, A>& _xyz, B _w);
+        template<typename A, typename B>
+        vecng(const vecng<3, A>& _xyz, const vecng<1, B>& _w);
+        template<typename A, typename B>
+        vecng(A _x, const vecng<3, B>& _yzw);
+        template<typename A, typename B>
+        vecng(const vecng<1, A>& _x, const vecng<3, B>& _yzw);
+        template<typename A, typename B>
+        vecng(const vecng<2, A>& _xy, const vecng<2, B>& _zw);
 
         
         inline T length2() const {
@@ -3858,12 +4114,6 @@ namespace GEO {
 
         
         template <class T2>
-        inline vector_type operator* (T2 s) const {
-            return vector_type(x * T(s), y * T(s), z * T(s), w * T(s));
-        }
-
-        
-        template <class T2>
         inline vector_type operator/ (T2 s) const {
             return vector_type(x / T(s), y / T(s), z / T(s), w / T(s));
         }
@@ -3912,12 +4162,26 @@ namespace GEO {
         return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z + v1.w * v2.w;
     }
 
-    template <class T2, class T>
-    inline vecng<4, T> operator* (
+#ifndef GOMGEN
+    template <
+	class T2, class T,
+	typename = std::enable_if_t<is_scalar<T2>::value>
+    > inline vecng<4, T> operator* (
         T2 s, const vecng<4, T>& v
     ) {
         return vecng<4, T>(T(s) * v.x, T(s) * v.y, T(s) * v.z, T(s) * v.w);
     }
+
+    template <
+	class T2, class T,
+	typename = std::enable_if_t<is_scalar<T2>::value>
+    > inline vecng<4, T> operator* (
+        const vecng<4, T>& v, T2 s
+    ) {
+        return vecng<4, T>(T(s) * v.x, T(s) * v.y, T(s) * v.z, T(s) * v.w);
+    }
+
+#endif
 
     template <index_t DIM, class T>
     inline std::ostream& operator<< (
@@ -3964,6 +4228,50 @@ namespace GEO {
     }
 
     
+    // -- Conversion vector constructors --
+
+    template<typename T>
+    template<typename A, typename B>
+    vecng<3, T>::vecng(const vecng<2, A>& _xy, B _z)
+        : x{static_cast<T>(_xy.x)}
+        , y{static_cast<T>(_xy.y)}
+        , z{static_cast<T>(_z)}
+    {}
+
+    template<typename T>
+    template<typename A, typename B>
+    vecng<3, T>::vecng(const vecng<2, A>& _xy, const vecng<1, B>& _z)
+        : x(static_cast<T>(_xy.x))
+        , y(static_cast<T>(_xy.y))
+        , z(static_cast<T>(_z.x))
+    {}
+
+    template<typename T>
+    template<typename A, typename B>
+    vecng<3, T>::vecng(A _x, const vecng<2, B>& _yz)
+        : x(static_cast<T>(_x))
+        , y(static_cast<T>(_yz.x))
+        , z(static_cast<T>(_yz.y))
+    {}
+
+    template<typename T>
+    template<typename A, typename B>
+    vecng<3, T>::vecng(const vecng<1, A>& _x, const vecng<2, B>& _yz)
+        : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_yz.x))
+        , z(static_cast<T>(_yz.y))
+    {}
+
+    template<typename T>
+    template<typename U>
+    vecng<3, T>::vecng(const vecng<4, U>& v)
+        : x(static_cast<T>(v.x))
+        , y(static_cast<T>(v.y))
+        , z(static_cast<T>(v.z))
+    {}
+
+
+    /************************************************************************/
 
     namespace Numeric {
 
@@ -3983,8 +4291,7 @@ namespace GEO {
 
     }
 
-    
-
+    /************************************************************************/
 }
 
 #endif
@@ -4659,8 +4966,30 @@ namespace GEO {
         return y;
     }
 
+    
+
     template <index_t DIM, class FT> inline
-    vecng<DIM,FT> mult(
+    vecng<DIM,FT> operator*(
+        const vecng<DIM,FT>& x, const Matrix<DIM, FT>& M
+    ) {
+        vecng<DIM,FT> y;
+        for(index_t i = 0; i < DIM; i++) {
+            y[i] = 0;
+            for(index_t j = 0; j < DIM; j++) {
+                y[i] += M(j, i) * x[j];
+            }
+        }
+        return y;
+    }
+
+
+    
+
+#ifndef GOMGEN
+
+    template <index_t DIM, class FT>
+    [[deprecated("use operator*(matrix, vector) instead")]]
+    inline vecng<DIM,FT> mult(
         const Matrix<DIM, FT>& M, const vecng<DIM,FT>& x
     ) {
         vecng<DIM,FT> y;
@@ -4672,6 +5001,8 @@ namespace GEO {
         }
         return y;
     }
+
+#endif
 
     
 
@@ -5091,91 +5422,40 @@ namespace GEO {
 
     
 
-    template <class FT> vecng<3,FT> transform_vector(
-        const vecng<3,FT>& v,
-        const Matrix<4,FT>& m
-    ){
-        index_t i,j ;
-        FT result[4] ;
+#ifndef GOMGEN
 
-        for(i=0; i<4; i++) {
-            result[i] = 0 ;
-        }
-        for(i=0; i<4; i++) {
-            for(j=0; j<3; j++) {
-                result[i] += v[j] * m(j,i) ;
-            }
-        }
-
-        return vecng<3,FT>(
-            result[0], result[1], result[2]
-        ) ;
-    }
-
-    template <class FT> vecng<3,FT> transform_point(
-        const vecng<3,FT>& v,
-        const Matrix<4,FT>& m
-    ){
-        index_t i,j ;
-        FT result[4] ;
-
-        for(i=0; i<4; i++) {
-            result[i] = 0 ;
-        }
-        for(i=0; i<4; i++) {
-            for(j=0; j<3; j++) {
-                result[i] += v[j] * m(j,i) ;
-            }
-            result[i] += m(3,i);
-        }
-
-        return vecng<3,FT>(
-            result[0] / result[3],
-            result[1] / result[3],
-            result[2] / result[3]
-        ) ;
-    }
-
-
-    template <class FT> vecng<3,FT> transform_point(
-        const Matrix<4,FT>& m,
-        const vecng<3,FT>& v
-    ){
-        index_t i,j ;
-        FT result[4] ;
-
-        for(i=0; i<4; i++) {
-            result[i] = 0 ;
-        }
-        for(i=0; i<4; i++) {
-            for(j=0; j<3; j++) {
-                result[i] += v[j] * m(i,j) ;
-            }
-            result[i] += m(i,3);
-        }
-
-        return vecng<3,FT>(
-            result[0] / result[3],
-            result[1] / result[3],
-            result[2] / result[3]
-        ) ;
-    }
-
-    template <class FT> vecng<4,FT> transform_vector(
-        const vecng<4,FT>& v,
-        const Matrix<4,FT>& m
+    template <class FT> [[deprecated("use operators and vec3/4 conversions")]]
+    inline vecng<3,FT> transform_vector(
+        const vecng<3,FT>& v, const Matrix<4,FT>& M
     ) {
-        index_t i,j ;
-        FT res[4] = {FT(0), FT(0), FT(0), FT(0)};
-
-        for(i=0; i<4; i++) {
-            for(j=0; j<4; j++) {
-                res[i] += v[j] * m(j,i) ;
-            }
-        }
-
-        return vecng<4,FT>(res[0], res[1], res[2], res[3]) ;
+	return vecng<3,FT>( vecng<4,FT>(v,FT(0.0)) * M );
     }
+
+    template <class FT> [[deprecated("use operators and vec3/4 conversions")]]
+    inline vecng<3,FT> transform_point(
+        const vecng<3,FT>& p, const Matrix<4,FT>& M
+    ) {
+	vecng<4,FT> q = vecng<4,FT>(p,FT(1.0)) * M;
+	return vecng<3,FT>(q.x/q.w, q.y/q.w, q.z/q.w);
+    }
+
+
+    template <class FT> [[deprecated("use operators and vec3/4 conversions")]]
+    inline vecng<3,FT> transform_point(
+        const Matrix<4,FT>& M, const vecng<3,FT>& p
+    ) {
+	vecng<4,FT> q = M * vecng<4,FT>(p,FT(1.0));
+	return vecng<3,FT>(q.x/q.w, q.y/q.w, q.z/q.w);
+    }
+
+    template <class FT> [[deprecated("use operators and vec3/4 conversions")]]
+    inline vecng<4,FT> transform_vector(
+	const vecng<4,FT>& v, const Matrix<4,FT>& M
+    ) {
+	return v*M;
+    }
+
+#endif
 
     
 
@@ -5619,6 +5899,18 @@ namespace GEO {
         y = around + bround;
     }
 
+    inline void fast_two_sum(double a, double b, double& x, double& y) {
+        x = a + b;
+        double bvirt = x - a;
+        y = b - bvirt;
+    }
+
+    inline void fast_two_diff(double a, double b, double& x, double& y) {
+        x = a - b;
+        double bvirt = a - x;
+        y = bvirt - b;
+    }
+
     inline void split(double a, double& ahi, double& alo) {
         double c = expansion_splitter_ * a;
         double abig = c - a;
@@ -5755,9 +6047,14 @@ namespace GEO {
     (new (alloca(expansion::bytes_on_stack(capa)))expansion(capa))
 #endif
 
-    static expansion* new_expansion_on_heap(index_t capa);
+    static inline expansion* new_expansion_on_heap(index_t capa) {
+	void* addr = malloc(bytes(capa));
+	return new(addr)expansion(capa);
+    }
 
-    static void delete_expansion_on_heap(expansion* e);
+    static inline void delete_expansion_on_heap(expansion* e) {
+	free(e);
+    }
 
     // ========================== Initialization from doubles
 
@@ -6754,6 +7051,16 @@ namespace GEO {
     
 
     typedef rationalg<expansion_nt> rational_nt;
+
+    
+
+    
+    template <> struct is_scalar<expansion_nt> {
+	typedef expansion_nt type;
+	static constexpr bool value = true;
+    };
+
+    
 }
 
 #endif
@@ -6776,8 +7083,11 @@ namespace GEO {
 // Uncomment to activate checks (keeps an arbitrary precision
 // representation of the number and checks that the interval
 // contains it).
-
 // #define INTERVAL_CHECK
+
+// Uncomment to deactivate all interval filters in geogram
+// (used for debugging and performance tests)
+// #define GEO_NO_INTERVALS
 
 namespace GEO {
 
@@ -7344,9 +7654,9 @@ namespace GEO {
         void adjust() {
             static constexpr double i = std::numeric_limits<double>::infinity();
             static constexpr double e = std::numeric_limits<double>::epsilon();
-            // nextafter(1.0) - 1.0
+            // e = nextafter(1.0) - 1.0
             static constexpr double m = std::numeric_limits<double>::min();
-            // smallest normalized
+            // m = smallest normalized
             static constexpr double l = 1.0-e;
             static constexpr double u = 1.0+e;
             static constexpr double em = e*m;
@@ -7407,9 +7717,122 @@ namespace GEO {
         return result *= b;
     }
 
+    
+
+    class intervalDummy : public intervalBase {
+    public:
+	struct Rounding {
+	    Rounding() {
+		geo_argused(this); // silence a warning in predicate filters.
+	    }
+        };
+
+        intervalDummy() {
+	}
+
+        intervalDummy(double x) {
+	    geo_argused(x);
+	}
+
+        intervalDummy(double l, double u) {
+	    geo_argused(l);
+	    geo_argused(u);
+        }
+
+        intervalDummy(const intervalDummy& rhs) = default;
+
+        intervalDummy(const expansion_nt& rhs) {
+            geo_argused(rhs);
+        }
+
+        intervalDummy& operator=(const intervalDummy& rhs) = default;
+
+        intervalDummy& operator=(double rhs) {
+	    geo_argused(rhs);
+            return *this;
+        }
+
+        intervalDummy& operator=(const expansion_nt& rhs) {
+	    geo_argused(rhs);
+	    return *this;
+        }
+
+        double inf() const {
+	    return -std::numeric_limits<double>::infinity();
+        }
+
+        double sup() const {
+	    return std::numeric_limits<double>::infinity();
+        }
+
+        double estimate() const {
+	    return std::numeric_limits<double>::quiet_NaN();
+        }
+
+        bool is_nan() const {
+            return true;
+        }
+
+        Sign2 sign() const {
+	    return SIGN2_NP;
+        }
+
+        intervalDummy& negate() {
+            return *this;
+        }
+
+        intervalDummy& operator+=(const intervalDummy &x) {
+	    geo_argused(x);
+            return *this;
+        }
+
+        intervalDummy& operator-=(const intervalDummy &x) {
+	    geo_argused(x);
+            return *this;
+        }
+
+        intervalDummy& operator*=(const intervalDummy &x) {
+	    geo_argused(x);
+            return *this;
+        }
+    };
+
+    inline intervalDummy operator+(
+	const intervalDummy& a, const intervalDummy& b
+    ) {
+        intervalDummy result = a;
+        return result += b;
+    }
+
+    inline intervalDummy operator-(
+	const intervalDummy& a, const intervalDummy& b
+    ) {
+        intervalDummy result = a;
+        return result -= b;
+    }
+
+    inline intervalDummy operator*(
+	const intervalDummy& a, const intervalDummy& b
+    ) {
+        intervalDummy result = a;
+        return result *= b;
+    }
+
+    
+
+#ifdef GEO_NO_INTERVALS
+    typedef intervalDummy interval_nt;
+#else
     typedef intervalRN interval_nt; // Seems that valgrind does not support RU
     //typedef intervalRU interval_nt;
+#endif
 
+
+    
+    template <> struct is_scalar<interval_nt> {
+	typedef interval_nt type;
+	static constexpr bool value = true;
+    };
 
     template <> inline vec2Hg<interval_nt> operator-(
         const vec2Hg<interval_nt>& p1, const vec2Hg<interval_nt>& p2
@@ -7432,7 +7855,6 @@ namespace GEO {
             p1.w * p2.w
         );
     }
-
 }
 
 #endif
@@ -7639,6 +8061,7 @@ namespace GEO {
         typedef vec3Hg<scalar> vec3h;
 
         typedef rationalg<scalar> rational;
+
     }
 }
 
@@ -7691,6 +8114,14 @@ namespace GEO {
             std::string& right
         );
 
+
+        bool GEOGRAM_API split_string(
+            const std::string& in,
+            const std::string& separator,
+            std::string& left,
+            std::string& right
+        );
+
         std::string GEOGRAM_API join_strings(
             const std::vector<std::string>& in,
             char separator
@@ -7723,6 +8154,33 @@ namespace GEO {
         bool GEOGRAM_API string_ends_with(
             const std::string& haystack, const std::string& needle
         );
+
+	GEO_NODISCARD inline std::string remove_prefix(
+	    const std::string& s, const std::string& prefix
+	) {
+	    if(string_starts_with(s, prefix)) {
+		return s.substr(prefix.length());
+	    }
+	    return s;
+	}
+
+	GEO_NODISCARD inline std::string remove_suffix(
+	    const std::string& s, const std::string& suffix
+	) {
+	    if(string_ends_with(s, suffix)) {
+		return s.substr(0, s.length() - suffix.length());
+	    }
+	    return s;
+	}
+
+	GEO_NODISCARD inline std::string trim_spaces(const std::string& s) {
+	    size_t first = s.find_first_not_of(' ');
+	    if (first == std::string::npos) {
+		return s;
+	    }
+	    size_t last = s.find_last_not_of(' ');
+	    return s.substr(first, (last - first + 1));
+	}
 
         std::string GEOGRAM_API format(const char* format, ...)
 #ifndef GOMGEN
@@ -10618,7 +11076,7 @@ namespace GEO {
 
         PeriodicDelaunay3d(bool periodic, double period=1.0);
 
-        PeriodicDelaunay3d(const vec3& period);
+        PeriodicDelaunay3d(const vec3& period, bool periodic = true);
 
         void set_vertices(
             index_t nb_vertices, const double* vertices

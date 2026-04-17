@@ -8,7 +8,7 @@ any dependency.
 
 To compile the example program under Linux:
 ```
-$ g++ -O3 -fopenmp -frounding-math -ffp-contract=off --std=c++11 Delaunay_example.cpp Delaunay_psm.cpp -o Delaunay_example -ldl -lm
+g++ -O3 -fopenmp -frounding-math -ffp-contract=off --std=c++17 Delaunay_example.cpp Delaunay_psm.cpp -o Delaunay_example -ldl -lm
 ```
 
 Documentation: 

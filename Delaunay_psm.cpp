@@ -111,6 +111,9 @@ namespace GEO {
         typedef byte* pointer;
 
         
+        typedef const byte* const_pointer;
+
+        
         typedef void (*function_pointer)();
 
         inline void clear(void* addr, size_t size) {
@@ -121,9 +124,8 @@ namespace GEO {
             ::memcpy(to, from, size);
         }
 
-        inline pointer function_pointer_to_generic_pointer(
-            function_pointer fptr
-        ) {
+	template <class FPTR=function_pointer>
+	inline pointer function_pointer_to_generic_pointer(FPTR fptr) {
             // I know this is ugly, but I did not find a simpler warning-free
             // way that is portable between all compilers.
             pointer result = nullptr;
@@ -131,23 +133,49 @@ namespace GEO {
             return result;
         }
 
-        inline function_pointer generic_pointer_to_function_pointer(
-            pointer ptr
-        ) {
+        template <class FPTR = function_pointer>
+	inline FPTR generic_pointer_to_function_pointer(pointer ptr) {
             // I know this is ugly, but I did not find a simpler warning-free
             // way that is portable between all compilers.
-            function_pointer result = nullptr;
+            FPTR result = nullptr;
             ::memcpy(&result, &ptr, sizeof(pointer));
             return result;
         }
 
-        inline function_pointer generic_pointer_to_function_pointer(void* ptr) {
+        template <class FPTR = function_pointer>
+        inline FPTR generic_pointer_to_function_pointer(void* ptr) {
             // I know this is ugly, but I did not find a simpler warning-free
             // way that is portable between all compilers.
-            function_pointer result = nullptr;
+            FPTR result = nullptr;
             ::memcpy(&result, &ptr, sizeof(pointer));
             return result;
         }
+
+
+	template <class T> inline T& pointer_as_reference(void* ptr) {
+	    // This is the recommended way of converting between pointers
+	    // of different types. Casting the pointer directly is undefined
+	    // behavior. Note: the call to memcpy() is eliminated by the
+	    // compiler (that generates the same thing as when casting the
+	    // pointer).
+	    T* T_ptr;
+	    ::memcpy(&T_ptr, &ptr, sizeof(pointer));
+	    return *T_ptr;
+	}
+
+	template <class T> inline const T& pointer_as_reference(
+	    const void* ptr
+	) {
+	    // This is the recommended way of converting between pointers
+	    // of different types. Casting the pointer directly is undefined
+	    // behavior. Note: the call to memcpy() is eliminated by the
+	    // compiler (that generates the same thing as when casting the
+	    // pointer).
+	    const T* T_ptr;
+	    ::memcpy(&T_ptr, &ptr, sizeof(pointer));
+	    return *T_ptr;
+	}
+
 
 #define GEO_MEMORY_ALIGNMENT 64
 
@@ -316,8 +344,17 @@ namespace GEO {
             template <class U>
             struct rebind {
                 
-                typedef aligned_allocator<U> other;
+                typedef aligned_allocator<U,ALIGN> other;
             };
+
+            /* \brief default constructor */
+            constexpr aligned_allocator() noexcept = default;
+
+            /* \brief conversion copy constructor */
+            template <class U, int A2> constexpr aligned_allocator(
+		const aligned_allocator<U, A2>&
+	    ) noexcept {
+	    }
 
             pointer address(reference x) {
                 return &x;
@@ -373,10 +410,8 @@ namespace GEO {
             }
 
             void destroy(pointer p) {
+		geo_argused(p); // else MSVC complains
                 p->~value_type();
-#ifdef GEO_COMPILER_MSVC
-                (void) p; // to avoid a "unreferenced variable" warning
-#endif
             }
 
             template <class T2, int A2> operator aligned_allocator<T2, A2>() {
@@ -856,8 +891,30 @@ namespace GEO {
         return y;
     }
 
+    
+
     template <index_t DIM, class FT> inline
-    vecng<DIM,FT> mult(
+    vecng<DIM,FT> operator*(
+        const vecng<DIM,FT>& x, const Matrix<DIM, FT>& M
+    ) {
+        vecng<DIM,FT> y;
+        for(index_t i = 0; i < DIM; i++) {
+            y[i] = 0;
+            for(index_t j = 0; j < DIM; j++) {
+                y[i] += M(j, i) * x[j];
+            }
+        }
+        return y;
+    }
+
+
+    
+
+#ifndef GOMGEN
+
+    template <index_t DIM, class FT>
+    [[deprecated("use operator*(matrix, vector) instead")]]
+    inline vecng<DIM,FT> mult(
         const Matrix<DIM, FT>& M, const vecng<DIM,FT>& x
     ) {
         vecng<DIM,FT> y;
@@ -869,6 +926,8 @@ namespace GEO {
         }
         return y;
     }
+
+#endif
 
     
 
@@ -1496,7 +1555,25 @@ namespace GEO {
                 return false;
             }
             left = in.substr(0,p);
-            right = in.substr(p+1,in.length()-p);
+            right = in.substr(p+1);
+            return true;
+        }
+
+
+        bool split_string(
+            const std::string& in,
+            const std::string& separator,
+            std::string& left,
+            std::string& right
+        ) {
+            size_t p = in.find(separator);
+            if(p == std::string::npos) {
+                left = "";
+                right = "";
+                return false;
+            }
+            left = in.substr(0,p);
+            right = in.substr(p+separator.length());
             return true;
         }
 
@@ -1864,9 +1941,9 @@ namespace GEO {
 
             virtual std::string dir_name(const std::string& path);
 
-            virtual void get_directory_entries(
+            virtual void get_directory_entries_recursive(
                 const std::string& path,
-                std::vector<std::string>& result, bool recursive
+                std::vector<std::string>& result, bool recursive = true
             );
 
             virtual void get_files(
@@ -1874,9 +1951,9 @@ namespace GEO {
                 std::vector<std::string>& result, bool recursive = false
             );
 
-            virtual void get_subdirectories(
+            virtual void get_subdirectories_recursive(
                 const std::string& path,
-                std::vector<std::string>& result, bool recursive = false
+                std::vector<std::string>& result, bool recursive = true
             );
 
             virtual void flip_slashes(std::string& path);
@@ -2004,9 +2081,9 @@ namespace GEO {
         std::string GEOGRAM_API dir_name(const std::string& path);
 
         
-        void GEOGRAM_API get_directory_entries(
+        void GEOGRAM_API get_directory_entries_recursive(
             const std::string& path,
-            std::vector<std::string>& result, bool recursive
+            std::vector<std::string>& result, bool recursive = true
         );
 
         
@@ -2358,6 +2435,8 @@ namespace {
     // True if displaying help in a way that
     // it will be easily processed by help2man
     bool man_mode = false;
+
+    Process::spinlock lock = GEOGRAM_SPINLOCK_INIT;
 
     struct Arg {
         
@@ -2949,7 +3028,10 @@ namespace GEO {
 	}
 
         std::string get_arg(const std::string& name) {
-            return Environment::instance()->get_value(name);
+	    Process::acquire_spinlock(lock);
+	    std::string result = Environment::instance()->get_value(name);
+	    Process::release_spinlock(lock);
+	    return result;
         }
 
         bool arg_is_declared(const std::string& name) {
@@ -3004,13 +3086,13 @@ namespace GEO {
                 String::to_bool(get_arg(name));
         }
 
-        bool set_arg(
-            const std::string& name, const std::string& value
-        ) {
+        bool set_arg(const std::string& name, const std::string& value) {
             if(!check_arg_value(name, value)) {
                 return false;
             }
+	    Process::acquire_spinlock(lock);
             Environment::instance()->set_value(name, value);
+	    Process::release_spinlock(lock);
             return true;
         }
 
@@ -3019,7 +3101,7 @@ namespace GEO {
             geo_assert_arg_type(
                 type, ARG_INT | ARG_DOUBLE | ARG_PERCENT | ARG_STRING
             );
-            Environment::instance()->set_value(name, String::to_string(value));
+	    set_arg(name, String::to_string(value));
         }
 
         void set_arg(const std::string& name, Numeric::uint32 value) {
@@ -3027,7 +3109,7 @@ namespace GEO {
             geo_assert_arg_type(
                 type, ARG_INT | ARG_DOUBLE | ARG_PERCENT | ARG_STRING
             );
-            Environment::instance()->set_value(name, String::to_string(value));
+	    set_arg(name, String::to_string(value));
         }
 
         void set_arg(const std::string& name, Numeric::int64 value) {
@@ -3035,7 +3117,7 @@ namespace GEO {
             geo_assert_arg_type(
                 type, ARG_INT | ARG_DOUBLE | ARG_PERCENT | ARG_STRING
             );
-            Environment::instance()->set_value(name, String::to_string(value));
+	    set_arg(name, String::to_string(value));
         }
 
         void set_arg(const std::string& name, Numeric::uint64 value) {
@@ -3043,27 +3125,25 @@ namespace GEO {
             geo_assert_arg_type(
                 type, ARG_INT | ARG_DOUBLE | ARG_PERCENT | ARG_STRING
             );
-            Environment::instance()->set_value(name, String::to_string(value));
+	    set_arg(name, String::to_string(value));
         }
 
         void set_arg(const std::string& name, double value) {
             ArgType type = get_arg_type(name);
             geo_assert_arg_type(type, ARG_DOUBLE | ARG_PERCENT | ARG_STRING);
-            Environment::instance()->set_value(name, String::to_string(value));
+	    set_arg(name, String::to_string(value));
         }
 
         void set_arg(const std::string& name, bool value) {
             ArgType type = get_arg_type(name);
             geo_assert_arg_type(type, ARG_BOOL | ARG_STRING);
-            Environment::instance()->set_value(name, String::to_string(value));
+	    set_arg(name, String::to_string(value));
         }
 
         void set_arg_percent(const std::string& name, double value) {
             ArgType type = get_arg_type(name);
             geo_assert_arg_type(type, ARG_PERCENT | ARG_STRING);
-            Environment::instance()->set_value(
-                name, String::to_string(value) + "%"
-            );
+	    set_arg(name, String::to_string(value) + "%");
         }
 
 	void get_arg_groups(std::vector<std::string>& groups) {
@@ -3848,6 +3928,10 @@ namespace {
             "nl:CUDA", false,
             "Use NVidia CUDA (if available in the system)"
         );
+        declare_arg(
+            "nl:CUDA:matrix_format", "fp64",
+            "one of fp32, fp64, fp32_precond"
+        );
     }
 
     void import_arg_group_log() {
@@ -4149,6 +4233,14 @@ namespace {
         );
         declare_arg("gfx:geometry", "1024x1024", "resolution");
         declare_arg("gfx:keypress", "", "initial key sequence sent to viewer");
+	declare_arg(
+	    "gfx:adapter", "default",
+	    "one of default, intel, nvidia (for optimus-prime systems)"
+	);
+	declare_arg(
+	    "gfx:hidden", false,
+	    "if set, window is hidden (useful for offscreen rendering)"
+	);
     }
 
     void import_arg_group_biblio() {
@@ -5677,7 +5769,7 @@ namespace GEO {
             return ".";
         }
 
-        void Node::get_directory_entries(
+        void Node::get_directory_entries_recursive(
             const std::string& path,
             std::vector<std::string>& result, bool recursive
         ) {
@@ -5686,7 +5778,7 @@ namespace GEO {
             if(recursive) {
                 for(size_t i = 0; i < result.size(); i++) {
                     if(is_directory(result[i])) {
-                        get_directory_entries(result[i], result, true);
+                        get_directory_entries_recursive(result[i], result, true);
                     }
                 }
             }
@@ -5697,7 +5789,7 @@ namespace GEO {
             std::vector<std::string>& result, bool recursive
         ) {
             std::vector<std::string> entries;
-            get_directory_entries(path, entries, recursive);
+            get_directory_entries_recursive(path, entries, recursive);
             for(size_t i = 0; i < entries.size(); i++) {
                 if(is_file(entries[i])) {
                     result.push_back(entries[i]);
@@ -5705,12 +5797,12 @@ namespace GEO {
             }
         }
 
-        void Node::get_subdirectories(
+        void Node::get_subdirectories_recursive(
             const std::string& path,
             std::vector<std::string>& result, bool recursive
         ) {
             std::vector<std::string> entries;
-            get_directory_entries(path, entries, recursive);
+            get_directory_entries_recursive(path, entries, recursive);
             for(size_t i = 0; i < entries.size(); i++) {
                 if(is_directory(entries[i])) {
                     result.push_back(entries[i]);
@@ -6215,11 +6307,13 @@ namespace GEO {
             return root_->dir_name(path);
         }
 
-        void get_directory_entries(
+        void get_directory_entries_recursive(
             const std::string& path,
             std::vector<std::string>& result, bool recursive
         ) {
-            return root_->get_directory_entries(path, result, recursive);
+            return root_->get_directory_entries_recursive(
+		path, result, recursive
+	    );
         }
 
         void get_files(
@@ -6233,7 +6327,7 @@ namespace GEO {
             const std::string& path,
             std::vector<std::string>& result, bool recursive
         ) {
-            return root_->get_subdirectories(path, result, recursive);
+            return root_->get_subdirectories_recursive(path, result, recursive);
         }
 
         void flip_slashes(std::string& path) {
@@ -7538,8 +7632,29 @@ namespace GEO {
 #include <stdio.h>
 #include <new>
 
-#if !defined(GEO_OS_ANDROID) && !defined(GEO_OS_EMSCRIPTEN)
+// MUSL does not have execinfo (so we won't have backtrace with MUSL)
+#if defined(__has_include)
+#if __has_include(<execinfo.h>)
 #include <execinfo.h>
+#define HAS_EXECINFO
+#endif
+#endif
+
+// detect MUSL that does not have feenableexcepts()/desisableexcepts()
+#ifdef __linux__
+#ifndef _GNU_SOURCE
+    #define _GNU_SOURCE
+    #include <features.h>
+    #ifndef __USE_GNU
+        #define __MUSL__
+    #endif
+    #undef _GNU_SOURCE
+#else
+    #include <features.h>
+    #ifndef __USE_GNU
+        #define __MUSL__
+    #endif
+#endif
 #endif
 
 #ifdef GEO_OS_APPLE
@@ -7853,7 +7968,7 @@ namespace GEO {
         }
 
         bool os_enable_FPE(bool flag) {
-#if defined(GEO_OS_APPLE) || defined(GEO_OS_EMSCRIPTEN)
+#if defined(GEO_OS_APPLE) || defined(GEO_OS_EMSCRIPTEN) || defined(__MUSL__)
             geo_argused(flag);
 #else
             int excepts = 0
@@ -7927,7 +8042,7 @@ namespace GEO {
         }
 
         void os_print_stack_trace() {
-#if !defined(GEO_OS_ANDROID) && !defined(GEO_OS_EMSCRIPTEN)
+#ifdef HAS_EXECINFO
             constexpr int MAX_STACK_FRAMES=128;
             static void *stack_traces[MAX_STACK_FRAMES];
             int i, trace_size = 0;
@@ -7940,6 +8055,8 @@ namespace GEO {
             if (messages != nullptr) {
                 free(messages);
             }
+#else
+	    fprintf(stderr,"Stacktrace not available on platform\n");
 #endif
         }
     }
@@ -8584,13 +8701,6 @@ namespace GEO {
 #include <signal.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
-#ifndef GEO_OS_ANDROID
-#ifndef GEO_OS_EMSCRIPTEN
-#include <execinfo.h>
-#endif
-#endif
-
 #endif
 
 namespace GEO {
@@ -8809,7 +8919,9 @@ namespace GEO {
         }
 
         int32 random_int32() {
-            return std::uniform_int_distribution<int32>(0, RAND_MAX)(random_engine);
+            return std::uniform_int_distribution<int32>(
+		0, std::numeric_limits<int32>::max()
+	    )(random_engine);
         }
 
         float32 random_float32() {
@@ -9967,113 +10079,7 @@ namespace {
 
     using namespace GEO;
 
-#ifdef PCK_STATS
-    std::vector<index_t> expansion_length_histo_;
-#endif
-
     
-
-    class Pools {
-
-    public:
-
-        Pools() : pools_(1024,nullptr) {
-            chunks_.reserve(1024);
-        }
-
-        ~Pools() {
-            for(index_t i=0; i<chunks_.size(); ++i) {
-                delete[] chunks_[i];
-            }
-        }
-
-        void* malloc(size_t size) {
-            if(size >= pools_.size()) {
-                return ::malloc(size);
-            }
-            if(pools_[size] == nullptr) {
-                new_chunk(size);
-            }
-            Memory::pointer result = pools_[size];
-            pools_[size] = next(pools_[size]);
-            return result;
-        }
-
-        void free(void* ptr, size_t size) {
-            if(size >= pools_.size()) {
-                ::free(ptr);
-                return;
-            }
-            set_next(Memory::pointer(ptr), pools_[size]);
-            pools_[size] = Memory::pointer(ptr);
-        }
-
-
-    protected:
-        static const index_t NB_ITEMS_PER_CHUNK = 512;
-
-        void new_chunk(size_t item_size) {
-            // Allocate chunk
-            Memory::pointer chunk =
-                new Memory::byte[item_size * NB_ITEMS_PER_CHUNK];
-            // Chain items in chunk
-            for(index_t i=0; i<NB_ITEMS_PER_CHUNK-1; ++i) {
-                Memory::pointer cur_item  = item(chunk, item_size, i);
-                Memory::pointer next_item = item(chunk, item_size, i+1);
-                set_next(cur_item, next_item);
-            }
-            // Last item's next is pool's first
-            set_next(
-                item(chunk, item_size,NB_ITEMS_PER_CHUNK-1),
-                pools_[item_size]
-            );
-            // Set pool's first to first in chunk
-            pools_[item_size] = chunk;
-            chunks_.push_back(chunk);
-        }
-
-    private:
-
-        Memory::pointer next(Memory::pointer item) const {
-            return *reinterpret_cast<Memory::pointer*>(item);
-        }
-
-        void set_next(
-            Memory::pointer item, Memory::pointer next
-        ) const {
-            *reinterpret_cast<Memory::pointer*>(item) = next;
-        }
-
-        Memory::pointer item(
-            Memory::pointer chunk, size_t item_size, index_t index
-        ) const {
-            geo_debug_assert(index < NB_ITEMS_PER_CHUNK);
-            return chunk + (item_size * size_t(index));
-        }
-
-        std::vector<Memory::pointer> pools_;
-
-        std::vector<Memory::pointer> chunks_;
-
-    };
-
-    static Pools pools_;
-
-    
-
-    inline void fast_two_sum(double a, double b, double& x, double& y) {
-        x = a + b;
-        double bvirt = x - a;
-        y = b - bvirt;
-    }
-
-#ifdef REMOVE_ME
-    inline void fast_two_diff(double a, double b, double& x, double& y) {
-        x = a - b;
-        double bvirt = a - x;
-        y = bvirt - b;
-    }
-#endif
 
     inline void two_one_sum(
         double a1, double a0, double b, double& x2, double& x1, double& x0
@@ -10519,30 +10525,6 @@ namespace GEO {
             check = 1.0 + expansion_epsilon_;
         } while((check != 1.0) && (check != lastcheck));
         expansion_splitter_ += 1.0;
-    }
-
-    static Process::spinlock expansions_lock = GEOGRAM_SPINLOCK_INIT;
-
-    expansion* expansion::new_expansion_on_heap(index_t capa) {
-        Process::acquire_spinlock(expansions_lock);
-#ifdef PCK_STATS
-        if(capa >= expansion_length_histo_.size()) {
-            expansion_length_histo_.resize(capa + 1);
-        }
-        expansion_length_histo_[capa]++;
-#endif
-        Memory::pointer addr = Memory::pointer(
-            pools_.malloc(expansion::bytes(capa))
-        );
-        Process::release_spinlock(expansions_lock);
-        expansion* result = new(addr)expansion(capa);
-        return result;
-    }
-
-    void expansion::delete_expansion_on_heap(expansion* e) {
-        Process::acquire_spinlock(expansions_lock);
-        pools_.free(e, expansion::bytes(e->capacity()));
-        Process::release_spinlock(expansions_lock);
     }
 
     // ====== Initialization from expansion and double ===============
@@ -20575,7 +20557,7 @@ namespace {
         const double* p0, const double* p1,
         const double* p2, const double* p3
     ) {
-        stats_orient3d.log_exact();
+	stats_orient3d.log_exact();
 
         const expansion& a11 = expansion_diff(p1[0], p0[0]);
         const expansion& a12 = expansion_diff(p1[1], p0[1]);
@@ -30376,7 +30358,8 @@ namespace GEO {
             // a transient state.
             // Note: update_v_to_cell() is overloaded here,
             // with a check on nb_vertices_non_periodic_,
-            // this is why the (-2) does not make everything crash.
+            // this is why the VERTEX_OF_DELETED_TET (= -2)
+	    // does not make everything crash.
             for(index_t i=0; i<tets_to_delete_.size(); ++i) {
                 index_t tdel = tets_to_delete_[i];
                 set_tet_vertex(tdel, 0, VERTEX_OF_DELETED_TET);
@@ -31079,7 +31062,8 @@ namespace GEO {
                     cell_to_v_store_[4 * t] == VERTEX_AT_INFINITY ||
                     cell_to_v_store_[4 * t + 1] == VERTEX_AT_INFINITY ||
                     cell_to_v_store_[4 * t + 2] == VERTEX_AT_INFINITY ||
-                    cell_to_v_store_[4 * t + 3] == VERTEX_AT_INFINITY) ;
+                    cell_to_v_store_[4 * t + 3] == VERTEX_AT_INFINITY
+		) ;
         }
 
 
@@ -31909,10 +31893,10 @@ namespace GEO {
     }
 
     PeriodicDelaunay3d::PeriodicDelaunay3d(
-        const vec3& period
+        const vec3& period, bool periodic
     ) :
         Delaunay(3),
-        periodic_(true),
+        periodic_(periodic),
         period_(period),
         weights_(nullptr),
         update_periodic_v_to_cell_(false),
@@ -35132,7 +35116,8 @@ namespace GEO {
     }
 
     typedef std::set<index_t> SparseBits;
-    void sparse_bits_flip_bit(SparseBits& bits, index_t bit) {
+
+    inline void sparse_bits_flip_bit(SparseBits& bits, index_t bit) {
 	auto it = bits.find(bit);
 	if(it == bits.end()) {
 	    bits.insert(bit);
@@ -35141,7 +35126,7 @@ namespace GEO {
 	}
     }
 
-    bool sparse_bits_is_zero(const SparseBits& bits) {
+    inline bool sparse_bits_is_zero(const SparseBits& bits) {
 	return (bits.size() == 0);
     }
 
@@ -36124,7 +36109,7 @@ namespace GEO {
 
 #ifndef GEOGRAM_PSM
                 Environment* env = Environment::instance();
-                env->set_value("version", VORPALINE_VERSION);
+                env->set_value("version", GEOGRAM_VERSION);
                 env->set_value("release_date", VORPALINE_BUILD_DATE);
                 env->set_value("SVN revision", VORPALINE_SVN_REVISION);
 #endif
@@ -36156,6 +36141,7 @@ namespace GEO {
                 // Register attribute types that can be saved into files.
                 geo_register_attribute_type<Numeric::uint8>("bool");
                 geo_register_attribute_type<char>("char");
+		geo_register_attribute_type<unsigned char>("unsigned char");
                 geo_register_attribute_type<int>("int");
                 geo_register_attribute_type<unsigned int>("unsigned int");
                 geo_register_attribute_type<index_t>("index_t");
@@ -36182,6 +36168,7 @@ namespace GEO {
                         FS.mount(NODEFS, { root: '/' }, '/root');
                     }
                 );
+
 #endif
 
 #ifndef GEOGRAM_PSM
