@@ -353,6 +353,38 @@ namespace GEO {
 #pragma GCC diagnostic ignored "-Walloca"
 #endif
 
+// =============================== Parallel STL ============================
+
+// For now, deactivate parallel STL if in a Pluggable Softare Module
+// (because if compiling with gcc, this forces linking tbb which may
+//  be not suitable)
+
+#ifdef GEOGRAM_PSM
+#   define GEO_NO_PARALLEL_STL
+#endif
+
+// gcc versions older than gcc 10 are shipped with an old libTBB
+// that conflicts with modern libOneTBB, so we deactivate parallel
+// STL if gcc version is lower than 10.
+
+#ifndef GEO_NO_PARALLEL_STL
+#  if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 10
+#    define GEO_NO_PARALLEL_STL
+#  endif
+#endif
+
+// The test should be:
+// defined(__cpp_lib_execution) && defined(__cpp_lib_parallel_algorithm)
+// but it does not seem to be implemented by all compilers, so using
+// hardcoded compiler test instead.
+
+#if !defined(GEO_COMPILER_CLANG) &&		\
+    !defined(GEO_OS_EMSCRIPTEN) && \
+    !defined(GEO_NO_PARALLEL_STL)
+#define GEO_PARALLEL_STL
+#endif
+
+
 #endif
 
 /******* extracted from ../basic/assert.h *******/
@@ -468,6 +500,8 @@ namespace GEO {
 #include <stdint.h>
 #include <limits>
 #include <type_traits>
+#include <iostream>
+#include <cstdlib>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -532,22 +566,22 @@ namespace GEO {
         
         typedef double float64;
 
-        inline float32 max_float32() {
+        inline constexpr float32 max_float32() {
             return std::numeric_limits<float32>::max();
         }
 
-        inline float32 min_float32() {
+        inline constexpr float32 min_float32() {
             // Note: numeric_limits<>::min() is not
             // what we want (it returns the smallest
             // positive non-denormal).
             return -max_float32();
         }
 
-        inline float64 max_float64() {
+        inline constexpr float64 max_float64() {
             return std::numeric_limits<float64>::max();
         }
 
-        inline float64 min_float64() {
+        inline constexpr float64 min_float64() {
             // Note: numeric_limits<>::min() is not
             // what we want (it returns the smallest
             // positive non-denormal).
@@ -559,6 +593,8 @@ namespace GEO {
         bool GEOGRAM_API is_nan(float64 x);
 
         void GEOGRAM_API random_reset();
+
+        void GEOGRAM_API random_reset(int seed);
 
         int32 GEOGRAM_API random_int32();
 
@@ -619,13 +655,13 @@ namespace GEO {
 
     typedef geo_index_t index_t;
 
-    inline index_t max_index_t() {
+    inline constexpr index_t max_index_t() {
         return std::numeric_limits<index_t>::max();
     }
 
     typedef geo_signed_index_t signed_index_t;
 
-    inline signed_index_t max_signed_index_t() {
+    inline constexpr signed_index_t max_signed_index_t() {
         return std::numeric_limits<signed_index_t>::max();
     }
 
@@ -653,6 +689,47 @@ namespace GEO {
     
 }
 
+
+
+
+
+#if defined(GOMGEN)
+#  define GEO_FP_CONTRACT_OFF(x)
+#elif defined(__clang__)
+#  define GEO_FP_CONTRACT_OFF _Pragma("clang fp contract(off)")
+#elif defined(_MSC_VER)
+#  define GEO_FP_CONTRACT_OFF _Pragma("fp_contract(off)")
+#elif defined(__GNUC__)
+
+// GCC does not have any pragma to deactivate FMA generation,
+// so instead we check that they are deactivated (by the command-line
+// option -ffp-contract=off) and fire an assertion fail if it was not
+// the case.
+struct GeoAssertNoFpContract {
+    GeoAssertNoFpContract() {
+#ifdef GEOGRAM_PSM
+	if(fp_contraction_enabled()) {
+	    std::cerr << "Needs to be compiled with -ffp-contract-off"
+		      << std::endl;
+	    abort();
+	}
+#else
+	geo_assert(!fp_contraction_enabled());
+#endif
+    }
+    static bool fp_contraction_enabled() {
+	return (a2plusb(0x1.0000002p0, -0x1.0000004p0) != 0.0);
+    }
+    __attribute__((noipa)) static double a2plusb(double a, double b) {
+	return a * a + b;
+    }
+};
+#  define GEO_FP_CONTRACT_OFF \
+    static GeoAssertNoFpContract CPP_CONCAT(assert_no_fp_contract_,__LINE__);
+#else
+#  define GEO_FP_CONTRACT_OFF _Pragma("STDC FP_CONTRACT OFF")
+#endif
+
 #endif
 
 /******* extracted from ../basic/memory.h *******/
@@ -661,6 +738,7 @@ namespace GEO {
 #define GEOGRAM_BASIC_MEMORY
 
 #include <vector>
+#include <new>
 #include <string.h>
 #include <stdlib.h>
 
@@ -1014,10 +1092,6 @@ namespace GEO {
             void destroy(pointer p) {
 		geo_argused(p); // else MSVC complains
                 p->~value_type();
-            }
-
-            template <class T2, int A2> operator aligned_allocator<T2, A2>() {
-                return aligned_allocator<T2,A2>();
             }
         };
 
@@ -1994,25 +2068,15 @@ namespace GEO {
                     size_ = size_in;
                     index_t nb_words = (size_ >> 5) + 1;
                     delete[] spinlocks_;
-                    spinlocks_ = new std::atomic<uint32_t>[nb_words];
-                    for(index_t i=0; i<nb_words; ++i) {
-                        // Note: std::atomic_init() is deprecated in C++20
-                        // that can initialize std::atomic through its
-                        // non-default constructor. We'll need to do something
-                        // else when we'll switch to C++20 (placement new...)
-                        std::atomic_init<uint32_t>(&spinlocks_[i],0u);
-                    }
+		    // Each entry is initialized with 0 -------------v
+                    spinlocks_ = new std::atomic<uint32_t>[nb_words]{};
                 }
-// Test at compile time that we are using atomic uint32_t operations (and not
-// using an additional lock which would be catastrophic in terms of performance)
-#ifdef __cpp_lib_atomic_is_always_lock_free
+
+                // Test at compile time that we are using atomic
+                // uint32_t operations (and not using an additional
+                // lock which would be catastrophic in terms of
+                // performance)
                 static_assert(std::atomic<uint32_t>::is_always_lock_free);
-#else
-// If we cannot test that at compile time, we test that at runtime in debug
-// mode (so that we will be notified in the non-regression test if one of
-// the platforms has the problem, which is very unlikely though...)
-                geo_debug_assert(size_ == 0 || spinlocks_[0].is_lock_free());
-#endif
             }
 
             index_t size() const {
@@ -4270,8 +4334,321 @@ namespace GEO {
         , z(static_cast<T>(v.z))
     {}
 
+    template<typename T>
+    template<typename U>
+    vecng<4, T>::vecng(const vecng<1, U>& v)
+        : x(static_cast<T>(v.x))
+        , y(static_cast<T>(v.x))
+        , z(static_cast<T>(v.x))
+        , w(static_cast<T>(v.x))
+    {}
 
-    /************************************************************************/
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(X _x, Y _y, Z _z, W _w)
+        : x(static_cast<T>(_x))
+        , y(static_cast<T>(_y))
+        , z(static_cast<T>(_z))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(const vecng<1, X>& _x, Y _y, Z _z, W _w)
+        : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_y))
+        , z(static_cast<T>(_z))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(X _x, const vecng<1, Y>& _y, Z _z, W _w)
+        : x(static_cast<T>(_x))
+        , y(static_cast<T>(_y.x))
+        , z(static_cast<T>(_z))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(const vecng<1, X>& _x, const vecng<1, Y>& _y, Z _z, W _w)
+        : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_y.x))
+        , z(static_cast<T>(_z))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(X _x, Y _y, const vecng<1, Z>& _z, W _w)
+        : x(static_cast<T>(_x))
+        , y(static_cast<T>(_y))
+        , z(static_cast<T>(_z.x))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(const vecng<1, X>& _x, Y _y, const vecng<1, Z>& _z, W _w)
+        : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_y))
+        , z(static_cast<T>(_z.x))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(X _x, const vecng<1, Y>& _y, const vecng<1, Z>& _z, W _w)
+        : x(static_cast<T>(_x))
+        , y(static_cast<T>(_y.x))
+        , z(static_cast<T>(_z.x))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(
+	const vecng<1, X>& _x, const vecng<1, Y>& _y,
+	const vecng<1, Z>& _z, W _w
+    )   : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_y.x))
+        , z(static_cast<T>(_z.x))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(
+	const vecng<1, X>& _x, Y _y, Z _z, const vecng<1, W>& _w
+    )   : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_y))
+        , z(static_cast<T>(_z))
+        , w(static_cast<T>(_w.x))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(
+	X _x, const vecng<1, Y>& _y, Z _z, const vecng<1, W>& _w
+    )   : x(static_cast<T>(_x))
+        , y(static_cast<T>(_y.x))
+        , z(static_cast<T>(_z))
+        , w(static_cast<T>(_w.x))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(
+	const vecng<1, X>& _x, const vecng<1, Y>& _y, Z _z,
+	const vecng<1, W>& _w
+    )   : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_y.x))
+        , z(static_cast<T>(_z))
+        , w(static_cast<T>(_w.x))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(X _x, Y _y, const vecng<1, Z>& _z, const vecng<1, W>& _w)
+        : x(static_cast<T>(_x))
+        , y(static_cast<T>(_y))
+        , z(static_cast<T>(_z.x))
+        , w(static_cast<T>(_w.x))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(
+	const vecng<1, X>& _x, Y _y, const vecng<1, Z>& _z,
+	const vecng<1, W>& _w
+    )   : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_y))
+        , z(static_cast<T>(_z.x))
+        , w(static_cast<T>(_w.x))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(
+	X _x, const vecng<1, Y>& _y, const vecng<1, Z>& _z,
+	const vecng<1, W>& _w
+    )   : x(static_cast<T>(_x))
+        , y(static_cast<T>(_y.x))
+        , z(static_cast<T>(_z.x))
+        , w(static_cast<T>(_w.x))
+    {}
+
+    template<typename T>
+    template<typename X, typename Y, typename Z, typename W>
+    vecng<4, T>::vecng(
+	const vecng<1, X>& _x, const vecng<1, Y>& _y,
+	const vecng<1, Z>& _z, const vecng<1, W>& _w
+    )   : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_y.x))
+        , z(static_cast<T>(_z.x))
+        , w(static_cast<T>(_w.x))
+    {}
+
+    // -- Conversion vector constructors --
+
+    template<typename T>
+    template<typename A, typename B, typename C>
+    vecng<4, T>::vecng(const vecng<2, A>& _xy, B _z, C _w)
+        : x(static_cast<T>(_xy.x))
+        , y(static_cast<T>(_xy.y))
+        , z(static_cast<T>(_z))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename A, typename B, typename C>
+    vecng<4, T>::vecng(const vecng<2, A>& _xy, const vecng<1, B>& _z, C _w)
+        : x(static_cast<T>(_xy.x))
+        , y(static_cast<T>(_xy.y))
+        , z(static_cast<T>(_z.x))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename A, typename B, typename C>
+    vecng<4, T>::vecng(const vecng<2, A>& _xy, B _z, const vecng<1, C>& _w)
+        : x(static_cast<T>(_xy.x))
+        , y(static_cast<T>(_xy.y))
+        , z(static_cast<T>(_z))
+        , w(static_cast<T>(_w.x))
+    {}
+
+    template<typename T>
+    template<typename A, typename B, typename C>
+    vecng<4, T>::vecng(
+	const vecng<2, A>& _xy, const vecng<1, B>& _z, const vecng<1, C>& _w
+    )   : x(static_cast<T>(_xy.x))
+        , y(static_cast<T>(_xy.y))
+        , z(static_cast<T>(_z.x))
+        , w(static_cast<T>(_w.x))
+    {}
+
+    template<typename T>
+    template<typename A, typename B, typename C>
+    vecng<4, T>::vecng(A _x, const vecng<2, B>& _yz, C _w)
+        : x(static_cast<T>(_x))
+        , y(static_cast<T>(_yz.x))
+        , z(static_cast<T>(_yz.y))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename A, typename B, typename C>
+    vecng<4, T>::vecng(const vecng<1, A>& _x,  const vecng<2, B>& _yz, C _w)
+        : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_yz.x))
+        , z(static_cast<T>(_yz.y))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename A, typename B, typename C>
+    vecng<4, T>::vecng(A _x, const vecng<2, B>& _yz, const vecng<1, C>& _w)
+        : x(static_cast<T>(_x))
+        , y(static_cast<T>(_yz.x))
+        , z(static_cast<T>(_yz.y))
+        , w(static_cast<T>(_w.x))
+    {}
+
+    template<typename T>
+    template<typename A, typename B, typename C>
+    vecng<4, T>::vecng(
+	const vecng<1, A>& _x, const vecng<2, B>& _yz, const vecng<1, C>& _w
+    )   : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_yz.x))
+        , z(static_cast<T>(_yz.y))
+        , w(static_cast<T>(_w.x))
+    {}
+
+    template<typename T>
+    template<typename A, typename B, typename C>
+    vecng<4, T>::vecng(A _x, B _y, const vecng<2, C>& _zw)
+        : x(static_cast<T>(_x))
+        , y(static_cast<T>(_y))
+        , z(static_cast<T>(_zw.x))
+        , w(static_cast<T>(_zw.y))
+    {}
+
+    template<typename T>
+    template<typename A, typename B, typename C>
+    vecng<4, T>::vecng(const vecng<1, A>& _x, B _y, const vecng<2, C>& _zw)
+        : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_y))
+        , z(static_cast<T>(_zw.x))
+        , w(static_cast<T>(_zw.y))
+    {}
+
+    template<typename T>
+    template<typename A, typename B, typename C>
+    vecng<4, T>::vecng(A _x, const vecng<1, B>& _y, const vecng<2, C>& _zw)
+        : x(static_cast<T>(_x))
+        , y(static_cast<T>(_y.x))
+        , z(static_cast<T>(_zw.x))
+        , w(static_cast<T>(_zw.y))
+    {}
+
+    template<typename T>
+    template<typename A, typename B, typename C>
+    vecng<4, T>::vecng(
+	const vecng<1, A>& _x, const vecng<1, B>& _y, const vecng<2, C>& _zw
+    ) : x(static_cast<T>(_x.x))
+      , y(static_cast<T>(_y.x))
+      , z(static_cast<T>(_zw.x))
+      , w(static_cast<T>(_zw.y))
+    {}
+
+    template<typename T>
+    template<typename A, typename B>
+    vecng<4, T>::vecng(const vecng<3, A>& _xyz, B _w)
+        : x(static_cast<T>(_xyz.x))
+        , y(static_cast<T>(_xyz.y))
+        , z(static_cast<T>(_xyz.z))
+        , w(static_cast<T>(_w))
+    {}
+
+    template<typename T>
+    template<typename A, typename B>
+    vecng<4, T>::vecng(const vecng<3, A>& _xyz, const vecng<1, B>& _w)
+        : x(static_cast<T>(_xyz.x))
+        , y(static_cast<T>(_xyz.y))
+        , z(static_cast<T>(_xyz.z))
+        , w(static_cast<T>(_w.x))
+    {}
+
+    template<typename T>
+    template<typename A, typename B>
+    vecng<4, T>::vecng(A _x, const vecng<3, B>& _yzw)
+        : x(static_cast<T>(_x))
+        , y(static_cast<T>(_yzw.x))
+        , z(static_cast<T>(_yzw.y))
+        , w(static_cast<T>(_yzw.z))
+    {}
+
+    template<typename T>
+    template<typename A, typename B>
+    vecng<4, T>::vecng(const vecng<1, A>& _x, const vecng<3, B>& _yzw)
+        : x(static_cast<T>(_x.x))
+        , y(static_cast<T>(_yzw.x))
+        , z(static_cast<T>(_yzw.y))
+        , w(static_cast<T>(_yzw.z))
+    {}
+
+    template<typename T>
+    template<typename A, typename B>
+    vecng<4, T>::vecng(const vecng<2, A>& _xy, const vecng<2, B>& _zw)
+        : x(static_cast<T>(_xy.x))
+        , y(static_cast<T>(_xy.y))
+        , z(static_cast<T>(_zw.x))
+        , w(static_cast<T>(_zw.y))
+    {}
+
+    
 
     namespace Numeric {
 
@@ -4291,7 +4668,7 @@ namespace GEO {
 
     }
 
-    /************************************************************************/
+    
 }
 
 #endif
@@ -4361,14 +4738,19 @@ namespace GEO {
         }
 
         T& operator[](coord_index_t i) {
-            geo_debug_assert(i < 2);
+            geo_debug_assert(i <= 2);
             return data()[i];
         }
 
         const T& operator[](coord_index_t i) const {
-            geo_debug_assert(i < 2);
+            geo_debug_assert(i <= 2);
             return data()[i];
         }
+
+	rationalg<T> cartesian(coord_index_t i) const {
+	    geo_debug_assert(i < 2);
+	    return rationalg<T>(data()[i], data()[2]);
+	}
 
         void optimize() {
             Numeric::optimize_number_representation(x);
@@ -4477,14 +4859,19 @@ namespace GEO {
         }
 
         T& operator[](coord_index_t i) {
-            geo_debug_assert(i < 3);
+            geo_debug_assert(i <= 3);
             return data()[i];
         }
 
         const T& operator[](coord_index_t i) const {
-            geo_debug_assert(i < 3);
+            geo_debug_assert(i <= 3);
             return data()[i];
         }
+
+	rationalg<T> cartesian(coord_index_t i) const {
+	    geo_debug_assert(i < 3);
+	    return rationalg<T>(data()[i], data()[3]);
+	}
 
         void optimize() {
             Numeric::optimize_number_representation(x);
@@ -4825,7 +5212,9 @@ namespace GEO {
         }
 
 
-        bool compute_inverse(matrix_type& result) const {
+        bool compute_inverse(
+	    matrix_type& result, value_type min_val = value_type(0)
+	) const {
             FT val=FT(0.0), val2=FT(0.0);
             matrix_type tmp = (*this);
 
@@ -4852,7 +5241,7 @@ namespace GEO {
                     }
                 }
 
-                if(val == 0.0) {
+                if(abs(val) <= min_val) {
                     return false;
                 }
 
@@ -5346,6 +5735,35 @@ namespace GEO {
         double xyz_min[3];
         double xyz_max[3];
 
+	Box() {
+	}
+
+	Box(double x1, double y1, double z1, double x2, double y2, double z2) {
+	    xyz_min[0] = x1;
+	    xyz_min[1] = y1;
+	    xyz_min[2] = z1;
+	    xyz_max[0] = x2;
+	    xyz_max[1] = y2;
+	    xyz_max[2] = z2;
+	}
+
+	Box(const vec3& lo, const vec3& hi) {
+	    xyz_min[0] = lo.x;
+	    xyz_min[1] = lo.y;
+	    xyz_min[2] = lo.z;
+	    xyz_max[0] = hi.x;
+	    xyz_max[1] = hi.y;
+	    xyz_max[2] = hi.z;
+	}
+
+	vec3 lo() const {
+	    return vec3(xyz_min);
+	}
+
+	vec3 hi() const {
+	    return vec3(xyz_max);
+	}
+
         bool contains(const vec3& b) const {
             for(coord_index_t c = 0; c < 3; ++c) {
                 if(b[c] < xyz_min[c]) {
@@ -5357,6 +5775,16 @@ namespace GEO {
             }
             return true;
         }
+
+	void enlarge(double d) {
+	    xyz_min[0] -= d;
+	    xyz_min[1] -= d;
+	    xyz_min[2] -= d;
+	    xyz_max[0] += d;
+	    xyz_max[1] += d;
+	    xyz_max[2] += d;
+	}
+
     };
 
     typedef Box Box3d;
@@ -5387,6 +5815,31 @@ namespace GEO {
         double xy_min[2];
         double xy_max[2];
 
+	Box2d() {
+	}
+
+	Box2d(double x1, double y1, double x2, double y2) {
+	    xy_min[0] = x1;
+	    xy_min[1] = y1;
+	    xy_max[0] = x2;
+	    xy_max[1] = y2;
+	}
+
+	Box2d(const vec2& lo, const vec2& hi) {
+	    xy_min[0] = lo.x;
+	    xy_min[1] = lo.y;
+	    xy_max[0] = hi.x;
+	    xy_max[1] = hi.y;
+	}
+
+	vec2 lo() const {
+	    return vec2(xy_min);
+	}
+
+	vec2 hi() const {
+	    return vec2(xy_max);
+	}
+
         bool contains(const vec2& b) const {
             for(coord_index_t c = 0; c < 2; ++c) {
                 if(b[c] < xy_min[c]) {
@@ -5398,6 +5851,13 @@ namespace GEO {
             }
             return true;
         }
+
+	void enlarge(double d) {
+	    xy_min[0] -= d;
+	    xy_min[1] -= d;
+	    xy_max[0] += d;
+	    xy_max[1] += d;
+	}
     };
 
 
@@ -5509,7 +5969,7 @@ namespace GEO {
 // For instance, Early Universe Reconstruction with 2M points:
 // with PCK_STATS: 6'36   without PCK_STATS: 3'38
 
-//#define PCK_STATS
+// #define PCK_STATS
 
 namespace GEO {
 
@@ -5731,6 +6191,10 @@ namespace GEO {
             const double* p2, const double* p3
         );
 
+        Sign GEOGRAM_API orient_3d_SOS(
+            const double* p0, const double* p1,
+            const double* p2, const double* p3
+        );
 
 #ifndef GEOGRAM_PSM
         inline Sign orient_3d(
@@ -5739,6 +6203,14 @@ namespace GEO {
         ) {
             return orient_3d(p0.data(),p1.data(),p2.data(),p3.data());
         }
+
+        inline Sign GEOGRAM_API orient_3d_SOS(
+            const vec3& p0, const vec3& p1,
+            const vec3& p2, const vec3& p3
+        ) {
+            return orient_3d_SOS(p0.data(),p1.data(),p2.data(),p3.data());
+	}
+
 #endif
 
         Sign GEOGRAM_API orient_3dlifted(
@@ -5860,6 +6332,117 @@ namespace GEO {
         void GEOGRAM_API initialize();
 
         void GEOGRAM_API terminate();
+    }
+}
+
+
+
+namespace GEO {
+
+
+    template<class T, class SOS> inline Sign orient_3d_SOS_impl(
+	const T& p0, const T& p1, const T& p2, const T& p3
+    ) {
+	constexpr coord_index_t X = 0, Y = 1, Z = 2;
+	Sign s = ::GEO::PCK::orient_3d(p0, p1, p2, p3);
+	if(s != ZERO) {
+	    return s;
+	}
+
+	// The perturbed determinant is as follows:
+	// | x1+eps     y1+eps^2    z1+eps^4    1 |
+	// | x2+eps^8   y2+eps^16   z2+eps^32   1 |
+	// | x3+eps^64  y3+eps^128  z3+eps^256  1 |
+	// | x4+eps^512 y4+eps^1024 z4+eps^2048 1 |
+	//
+	// By developping and sorting by exponents of eps
+	// one gets the perturbations. Did it with TinyCAS:
+	// https://github.com/BrunoLevy/Experiment/blob/main/algo/tiny_cas.h
+	//
+	//              | a b 1 |
+	// - The minors | c d 1 | correspond to orient_2d((a,b), (c,d), (e,f))
+	//              | e f 1 |
+	//
+	// - The other terms are just difference of coordinates (orient_1d)
+
+	// Static array that encodes all the terms of the expansion.
+	static const struct SOSInfo {
+	    index_t dim;        // 0: constant, 1: orient_1d, 2: orient_2d
+	    index_t v1, v2, v3; // local indices of the two or three vertices
+	    index_t ax1, ax2;   // one or two projection axes
+	    Sign sign;          // sign of the term
+	} sosInfo[] = {
+	    {2,  1, 2, 3,          Y, Z,         POSITIVE}, // eps
+	    {2,  1, 2, 3,          X, Z,         NEGATIVE}, // eps^2
+	    {2,  1, 2, 3,          X, Y,         POSITIVE}, // eps^4
+	    {2,  0, 2, 3,          Y, Z,         NEGATIVE}, // eps^8
+	    {1,  3, 2, NO_INDEX,   Z, NO_INDEX,  POSITIVE}, // eps^10
+	    {1,  2, 3, NO_INDEX,   Y, NO_INDEX,  POSITIVE}, // eps^12
+	    {2,  0, 2, 3,          X, Z,         POSITIVE}, // eps^16
+	    // z2-z3 = -term in eps^10, already seen        // eps^17
+	    {1,  3, 2, NO_INDEX,   X, NO_INDEX,  POSITIVE}, // eps^20
+	    {2,  0, 2, 3,          X, Y,         NEGATIVE}, // eps^32
+	    // y3-y2 = -term in eps^12, already seen        // eps^33
+	    // x2-x3 = -term in eps^20, already seen        // eps^34
+	    {2,  0, 1, 3,          Y, Z,         POSITIVE}, // eps^64
+	    {1,  1, 3, NO_INDEX,   Z, NO_INDEX,  POSITIVE}, // eps^66
+	    {1,	 3, 1, NO_INDEX,   Y, NO_INDEX,  POSITIVE}, // eps^68
+	    {1,  3, 0, NO_INDEX,   Z, NO_INDEX,  POSITIVE}, // eps^80
+	    {0,NO_INDEX,NO_INDEX,NO_INDEX,NO_INDEX,NO_INDEX, NEGATIVE} // eps^84
+	    // There are more terms (up to eps^2184) but we do not need them,
+	    // since we got a (constant) non-zero coefficient for eps^84
+	};
+
+	SOS sos(p0, p1, p2, p3);
+
+	for(index_t k=0; ;++k) {
+	    const SOSInfo& I = sosInfo[k];
+	    switch(I.dim) {
+	    case 0: {
+		return I.sign;
+	    } break;
+	    case 1: {
+		s = sos.orient_1d(I.v1, I.v2, I.ax1);
+		if(s != ZERO) {
+		    return Sign(I.sign*s);
+		}
+	    } break;
+	    case 2: {
+		s = sos.orient_2d(I.v1, I.v2, I.v3, I.ax1, I.ax2);
+		if(s != ZERO) {
+		    return Sign(I.sign*s);
+		}
+	    } break;
+	    default:
+		geo_assert_not_reached;
+	    }
+	}
+	geo_assert_not_reached;
+    }
+
+    namespace Permutation {
+	template <class T> inline bool permutation_is_odd(
+	    const T** orig, const T** perm, index_t n
+	) {
+	    geo_debug_assert(n <= 64);
+	    Numeric::uint64 visited = 0;
+	    bool odd = false;
+	    for (index_t i = 0; i < n; ++i) {
+		if ((visited >> i) & 1) {
+		    continue;
+		}
+		// Compute the length of the cycle starting from perm[i]
+		index_t len = 0;
+		for (index_t j = i; !((visited >> j) & 1); ) {
+		    visited |= (Numeric::uint64(1) << j);
+		    ++len;
+		    j = index_t(std::find(orig, orig + n, perm[j]) - orig);
+		}
+		// even-length cycle contributes odd parity
+		if (len % 2 == 0) odd = !odd;
+	    }
+	    return odd;
+	}
     }
 }
 
@@ -6802,6 +7385,14 @@ namespace GEO {
         return (rep_ == nullptr) ?
             std::string("null") :
             rep_->to_string()   ;
+    }
+
+    bool is_one() const {
+	return rep().equals(1.0);
+    }
+
+    bool is_zero() const {
+	return sign() == ZERO;
     }
 
     protected:
@@ -8061,8 +8652,17 @@ namespace GEO {
         typedef vec3Hg<scalar> vec3h;
 
         typedef rationalg<scalar> rational;
-
     }
+
+    #ifndef GEOGRAM_PSM
+    namespace PCK {
+        Sign GEOGRAM_API orient_3d_SOS(
+            const exact::vec3h& p0, const exact::vec3h& p1,
+            const exact::vec3h& p2, const exact::vec3h& p3
+        );
+    }
+    #endif
+
 }
 
 #endif
@@ -8205,6 +8805,22 @@ namespace GEO {
             out << value;
             return out.str();
         }
+
+
+        template <>
+        inline std::string to_string(const unsigned char& value) {
+            std::ostringstream out;
+            out << int(value);
+            return out.str();
+        }
+
+        template <>
+        inline std::string to_string(const signed char& value) {
+            std::ostringstream out;
+            out << int(value);
+            return out.str();
+        }
+
 
         template <class T>
         inline std::string to_display_string(const T& value) {
@@ -9642,40 +10258,28 @@ namespace GEO {
 #ifndef GEOGRAM_BASIC_ALGORITHM
 #define GEOGRAM_BASIC_ALGORITHM
 
-
-#if defined(GEO_OS_LINUX) && defined(GEO_OPENMP)
-#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 4) && !defined(GEO_OS_ANDROID)
-#include <parallel/algorithm>
-#define GEO_USE_GCC_PARALLEL_STL
-#endif
-#elif defined(GEO_OS_WINDOWS)
-#if (_MSC_VER >= 1700)
-#include <ppl.h>
-#define GEO_USE_MSVC_PARALLEL_STL
-#endif
-#endif
-
 #include <algorithm>
 #include <random>
+
+#ifdef GEO_PARALLEL_STL
+#include <execution>
+#endif
 
 
 namespace GEO {
 
-    bool GEOGRAM_API uses_parallel_algorithm();
+    bool GEOGRAM_API uses_parallel_algorithm(size_t size=0);
 
     template <typename ITERATOR>
     inline void sort(
         const ITERATOR& begin, const ITERATOR& end
     ) {
-        if(uses_parallel_algorithm()) {
-#if defined(GEO_USE_GCC_PARALLEL_STL)
-            __gnu_parallel::sort(begin, end);
-#elif defined(GEO_USE_MSVC_PARALLEL_STL)
-            concurrency::parallel_sort(begin, end);
-#else
-            std::sort(begin, end);
+#ifdef GEO_PARALLEL_STL
+        if(uses_parallel_algorithm(size_t(end - begin))) {
+            std::sort(std::execution::par, begin, end);
+        } else
 #endif
-        } else {
+	{
             std::sort(begin, end);
         }
     }
@@ -9684,15 +10288,12 @@ namespace GEO {
     inline void sort(
         const ITERATOR& begin, const ITERATOR& end, const CMP& cmp
     ) {
-        if(uses_parallel_algorithm()) {
-#if defined(GEO_USE_GCC_PARALLEL_STL)
-            __gnu_parallel::sort(begin, end, cmp);
-#elif defined(GEO_USE_MSVC_PARALLEL_STL)
-            concurrency::parallel_sort(begin, end, cmp);
-#else
-            std::sort(begin, end, cmp);
+#ifdef GEO_PARALLEL_STL
+        if(uses_parallel_algorithm(size_t(end - begin))) {
+            std::sort(std::execution::par, begin, end, cmp);
+        } else
 #endif
-        } else {
+	{
             std::sort(begin, end, cmp);
         }
     }
@@ -9740,11 +10341,9 @@ namespace GEO {
     }
 
     template <typename ITERATOR>
-    inline void random_shuffle(
-        const ITERATOR& begin, const ITERATOR& end
-    ) {
-	std::random_device rng;
-	std::mt19937 urng(rng());
+    inline void random_shuffle(const ITERATOR& begin, const ITERATOR& end) {
+	Numeric::int32 seed = Numeric::random_int32();
+	std::mt19937 urng{Numeric::uint32(seed)};
 	std::shuffle(begin, end, urng);
     }
 
@@ -10972,16 +11571,12 @@ namespace GEO {
                     cell_status_t val = (i < size_) ?
                         old_cell_status[i].load(std::memory_order_relaxed) :
                         FREE_CELL;
-                    std::atomic_init(&cell_status_[i],val);
+                    cell_status_[i].store(val, std::memory_order_relaxed);
                 }
                 delete[] old_cell_status;
             }
             size_ = size_in;
-#ifdef __cpp_lib_atomic_is_always_lock_free
             static_assert(std::atomic<cell_status_t>::is_always_lock_free);
-#else
-            geo_debug_assert(size_ == 0 || cell_status_[0].is_lock_free());
-#endif
         }
 
         void resize(index_t size_in) {
@@ -12013,9 +12608,8 @@ namespace GEO {
             const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4
         );
 
-
         void create_enclosing_rectangle(
-            double x1, double y1, double x2, double y2
+	    double x1, double y1, double x2, double y2
         ) {
             create_enclosing_quad(
                 vec2(x1,y1),

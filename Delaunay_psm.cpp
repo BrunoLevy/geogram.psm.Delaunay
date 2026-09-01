@@ -59,6 +59,7 @@
 #define GEOGRAM_BASIC_MEMORY
 
 #include <vector>
+#include <new>
 #include <string.h>
 #include <stdlib.h>
 
@@ -95,25 +96,25 @@
 namespace GEO {
 
     namespace Memory {
-
+        
         typedef unsigned char byte;
 
-
+        
         typedef unsigned char word8;
 
-
+        
         typedef unsigned short word16;
 
-
+        
         typedef unsigned int word32;
 
-
+        
         typedef byte* pointer;
 
-
+        
         typedef const byte* const_pointer;
 
-
+        
         typedef void (*function_pointer)();
 
         inline void clear(void* addr, size_t size) {
@@ -317,33 +318,33 @@ namespace GEO {
         template <class T, int ALIGN = GEO_MEMORY_ALIGNMENT>
         class aligned_allocator {
         public:
-
+            
             typedef T value_type;
 
-
+            
             typedef T* pointer;
 
-
+            
             typedef T& reference;
 
-
+            
             typedef const T* const_pointer;
 
-
+            
             typedef const T& const_reference;
 
-
+            
             typedef ::std::size_t size_type;
 
-
+            
             typedef ::std::ptrdiff_t difference_type;
 
-
+	    
 	    static constexpr int ALIGNMENT = ALIGN;
 
             template <class U>
             struct rebind {
-
+                
                 typedef aligned_allocator<U,ALIGN> other;
             };
 
@@ -413,10 +414,6 @@ namespace GEO {
 		geo_argused(p); // else MSVC complains
                 p->~value_type();
             }
-
-            template <class T2, int A2> operator aligned_allocator<T2, A2>() {
-                return aligned_allocator<T2,A2>();
-            }
         };
 
         template <typename T1, int A1, typename T2, int A2>
@@ -434,7 +431,7 @@ namespace GEO {
         }
     }
 
-
+    
 
     template <class T>
     class vector : public ::std::vector<T, Memory::aligned_allocator<T> > {
@@ -541,22 +538,22 @@ namespace GEO {
         typedef ::std::vector<bool> baseclass;
 
     public:
-
+        
         vector() :
             baseclass() {
         }
 
-
+        
         explicit vector(index_t size) :
             baseclass(size) {
         }
 
-
+        
         explicit vector(index_t size, bool val) :
             baseclass(size, val) {
         }
 
-
+        
         index_t size() const {
             //   casts baseclass::size() from size_t (64 bits)
             //   to index_t (32 bits), because all
@@ -582,19 +579,19 @@ namespace GEO {
 
 namespace GEO {
 
-
+    
 
 
     template <index_t DIM, class FT>
     class Matrix {
     public:
-
+        
         typedef Matrix<DIM, FT> matrix_type;
 
-
+        
         typedef FT value_type;
 
-
+        
         static constexpr index_t dim = DIM;
 
         inline Matrix() {
@@ -750,7 +747,9 @@ namespace GEO {
         }
 
 
-        bool compute_inverse(matrix_type& result) const {
+        bool compute_inverse(
+	    matrix_type& result, value_type min_val = value_type(0)
+	) const {
             FT val=FT(0.0), val2=FT(0.0);
             matrix_type tmp = (*this);
 
@@ -777,7 +776,7 @@ namespace GEO {
                     }
                 }
 
-                if(val == 0.0) {
+                if(abs(val) <= min_val) {
                     return false;
                 }
 
@@ -811,13 +810,13 @@ namespace GEO {
             return result;
         }
 
-
+        
 
         inline const FT* data() const {
             return &(coeff_[0][0]);
         }
 
-
+        
 
         inline FT* data() {
             return &(coeff_[0][0]);
@@ -835,7 +834,7 @@ namespace GEO {
         FT coeff_[DIM][DIM];
     };
 
-
+    
 
     template <index_t DIM, class FT>
     inline std::ostream& operator<< (
@@ -863,7 +862,7 @@ namespace GEO {
         return input;
     }
 
-
+    
 
     template <index_t DIM, class FT> inline
     void mult(const Matrix<DIM, FT>& M, const FT* x, FT* y) {
@@ -875,7 +874,7 @@ namespace GEO {
         }
     }
 
-
+    
 
     template <index_t DIM, class FT> inline
     vecng<DIM,FT> operator*(
@@ -891,7 +890,7 @@ namespace GEO {
         return y;
     }
 
-
+    
 
     template <index_t DIM, class FT> inline
     vecng<DIM,FT> operator*(
@@ -908,7 +907,7 @@ namespace GEO {
     }
 
 
-
+    
 
 #ifndef GOMGEN
 
@@ -929,7 +928,7 @@ namespace GEO {
 
 #endif
 
-
+    
 
 }
 
@@ -1020,7 +1019,7 @@ namespace GEO {
             }
         }
 
-
+        
 
         template <class VEC>
         inline double triangle_area(
@@ -1720,7 +1719,7 @@ namespace GEO {
             return out;
         }
 
-
+        
 
         ConversionError::ConversionError(
             const std::string& s, const std::string& type
@@ -1739,40 +1738,28 @@ namespace GEO {
 #ifndef GEOGRAM_BASIC_ALGORITHM
 #define GEOGRAM_BASIC_ALGORITHM
 
-
-#if defined(GEO_OS_LINUX) && defined(GEO_OPENMP)
-#if (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 4) && !defined(GEO_OS_ANDROID)
-#include <parallel/algorithm>
-#define GEO_USE_GCC_PARALLEL_STL
-#endif
-#elif defined(GEO_OS_WINDOWS)
-#if (_MSC_VER >= 1700)
-#include <ppl.h>
-#define GEO_USE_MSVC_PARALLEL_STL
-#endif
-#endif
-
 #include <algorithm>
 #include <random>
+
+#ifdef GEO_PARALLEL_STL
+#include <execution>
+#endif
 
 
 namespace GEO {
 
-    bool GEOGRAM_API uses_parallel_algorithm();
+    bool GEOGRAM_API uses_parallel_algorithm(size_t size=0);
 
     template <typename ITERATOR>
     inline void sort(
         const ITERATOR& begin, const ITERATOR& end
     ) {
-        if(uses_parallel_algorithm()) {
-#if defined(GEO_USE_GCC_PARALLEL_STL)
-            __gnu_parallel::sort(begin, end);
-#elif defined(GEO_USE_MSVC_PARALLEL_STL)
-            concurrency::parallel_sort(begin, end);
-#else
-            std::sort(begin, end);
+#ifdef GEO_PARALLEL_STL
+        if(uses_parallel_algorithm(size_t(end - begin))) {
+            std::sort(std::execution::par, begin, end);
+        } else
 #endif
-        } else {
+	{
             std::sort(begin, end);
         }
     }
@@ -1781,15 +1768,12 @@ namespace GEO {
     inline void sort(
         const ITERATOR& begin, const ITERATOR& end, const CMP& cmp
     ) {
-        if(uses_parallel_algorithm()) {
-#if defined(GEO_USE_GCC_PARALLEL_STL)
-            __gnu_parallel::sort(begin, end, cmp);
-#elif defined(GEO_USE_MSVC_PARALLEL_STL)
-            concurrency::parallel_sort(begin, end, cmp);
-#else
-            std::sort(begin, end, cmp);
+#ifdef GEO_PARALLEL_STL
+        if(uses_parallel_algorithm(size_t(end - begin))) {
+            std::sort(std::execution::par, begin, end, cmp);
+        } else
 #endif
-        } else {
+	{
             std::sort(begin, end, cmp);
         }
     }
@@ -1837,11 +1821,9 @@ namespace GEO {
     }
 
     template <typename ITERATOR>
-    inline void random_shuffle(
-        const ITERATOR& begin, const ITERATOR& end
-    ) {
-	std::random_device rng;
-	std::mt19937 urng(rng());
+    inline void random_shuffle(const ITERATOR& begin, const ITERATOR& end) {
+	Numeric::int32 seed = Numeric::random_int32();
+	std::mt19937 urng{Numeric::uint32(seed)};
 	std::shuffle(begin, end, urng);
     }
 
@@ -1854,7 +1836,7 @@ namespace GEO {
 
 namespace GEO {
 
-    bool uses_parallel_algorithm() {
+    bool uses_parallel_algorithm(size_t size) {
         static bool initialized = false;
         static bool result = false;
         if(!initialized) {
@@ -1863,7 +1845,8 @@ namespace GEO {
                 CmdLine::get_arg_bool("algo:parallel");
             initialized = true;
         }
-        return result;
+	bool large_enough = (size == 0 || size > 65535);
+        return result && large_enough && !Process::is_running_threads();
     }
 }
 
@@ -1888,7 +1871,7 @@ namespace GEO {
 
             ~Node() override;
 
-
+            
 
             virtual bool is_file(const std::string& path);
 
@@ -1931,7 +1914,7 @@ namespace GEO {
 
             virtual std::string load_file_as_string(const std::string& path);
 
-
+            
 
             virtual std::string extension(const std::string& path);
 
@@ -1969,36 +1952,36 @@ namespace GEO {
             MemoryNode(const std::string& path="/") : path_(path) {
             }
 
-
+            
             bool copy_file(
                 const std::string& from, const std::string& to
             ) override ;
 
-
+            
             std::string load_file_as_string(const std::string& path) override;
 
-
+            
             virtual bool is_file(const std::string& path) override;
 
-
+            
             virtual bool is_directory(const std::string& path) override;
 
-
+            
             virtual bool create_directory(const std::string& path) override;
 
-
+            
             virtual bool delete_directory(const std::string& path) override;
 
-
+            
             virtual bool delete_file(const std::string& path) override;
 
-
+            
             bool get_directory_entries(
                 const std::string& path, std::vector<std::string>& result
             ) override;
 
 
-
+            
             bool rename_file(
                 const std::string& old_name, const std::string& new_name
             ) override;
@@ -2021,16 +2004,16 @@ namespace GEO {
 
         typedef SmartPointer<Node> Node_var;
 
-
+        
 
         void GEOGRAM_API initialize();
 
         void GEOGRAM_API terminate();
 
-
+        
         bool GEOGRAM_API is_file(const std::string& path);
 
-
+        
         bool GEOGRAM_API is_directory(const std::string& path);
 
         bool GEOGRAM_API can_read_directory(const std::string& path);
@@ -2039,89 +2022,89 @@ namespace GEO {
             const std::string& path, bool create_missing_directories = false
         );
 
-
+        
         bool GEOGRAM_API create_directory(const std::string& path);
 
-
+        
         bool GEOGRAM_API delete_directory(const std::string& path);
 
-
+        
         bool GEOGRAM_API delete_file(const std::string& path);
 
-
+        
         bool GEOGRAM_API get_directory_entries(
             const std::string& path, std::vector<std::string>& result
         );
 
-
+        
         std::string GEOGRAM_API get_current_working_directory();
         bool GEOGRAM_API set_current_working_directory(
             const std::string& path
         );
 
-
+        
         bool GEOGRAM_API rename_file(
             const std::string& old_name, const std::string& new_name
         );
 
-
+        
         Numeric::uint64 GEOGRAM_API get_time_stamp(
             const std::string& path
         );
 
-
+        
         std::string GEOGRAM_API extension(const std::string& path);
 
-
+        
         std::string GEOGRAM_API base_name(
             const std::string& path, bool remove_extension = true
         );
 
-
+        
         std::string GEOGRAM_API dir_name(const std::string& path);
 
-
+        
         void GEOGRAM_API get_directory_entries_recursive(
             const std::string& path,
             std::vector<std::string>& result, bool recursive = true
         );
 
-
+        
         void GEOGRAM_API get_files(
             const std::string& path,
             std::vector<std::string>& result, bool recursive = false
         );
 
-
+        
         void GEOGRAM_API get_subdirectories(
             const std::string& path,
             std::vector<std::string>& result, bool recursive = false
         );
 
-
+        
         void GEOGRAM_API flip_slashes(std::string& path);
 
-
+        
         bool GEOGRAM_API copy_file(
             const std::string& from, const std::string& to
         );
 
-
+        
         bool GEOGRAM_API set_executable_flag(const std::string& filename);
 
-
+        
         bool GEOGRAM_API touch(const std::string& filename);
 
-
+        
         std::string GEOGRAM_API normalized_path(const std::string& path);
 
-
+        
         std::string GEOGRAM_API absolute_path(const std::string& path);
 
-
+        
         std::string GEOGRAM_API home_directory();
 
-
+        
         std::string GEOGRAM_API documents_directory();
 
         void GEOGRAM_API get_root(Node*& root);
@@ -2145,7 +2128,7 @@ namespace {
 
     class RootEnvironment : public Environment {
     protected:
-
+        
         bool get_local_value(
             const std::string& name, std::string& value
         ) const override {
@@ -2157,7 +2140,7 @@ namespace {
             return false;
         }
 
-
+        
         bool set_local_value(
             const std::string& name, const std::string& value
         ) override {
@@ -2165,12 +2148,12 @@ namespace {
             return true;
         }
 
-
+        
         ~RootEnvironment() override {
         }
 
     private:
-
+        
         typedef std::map<std::string, std::string> ValueMap;
         ValueMap values_;
     };
@@ -2178,7 +2161,7 @@ namespace {
 
 namespace GEO {
 
-
+    
 
     VariableObserver::VariableObserver(
         const std::string& var_name
@@ -2195,7 +2178,7 @@ namespace GEO {
         environment_->remove_observer(observed_variable_, this);
     }
 
-
+    
 
     void VariableObserverList::notify_observers(
         const std::string& value
@@ -2226,7 +2209,7 @@ namespace GEO {
         observers_.erase(it);
     }
 
-
+    
 
     Environment::Environment_var Environment::instance_;
 
@@ -2370,7 +2353,7 @@ namespace GEO {
         return true;
     }
 
-
+    
 
     SystemEnvironment::~SystemEnvironment() {
     }
@@ -2439,53 +2422,53 @@ namespace {
     Process::spinlock lock = GEOGRAM_SPINLOCK_INIT;
 
     struct Arg {
-
+        
         std::string name;
-
+        
         std::string desc;
-
+        
         ArgType type;
-
+        
         ArgFlags flags;
     };
 
-
+    
     typedef std::map<std::string, Arg> Args;
 
     typedef std::vector<std::string> GroupArgs;
 
     struct Group {
-
+        
         std::string name;
-
+        
         std::string desc;
-
+        
         ArgFlags flags;
-
+        
         GroupArgs args;
     };
 
-
+    
     typedef std::map<std::string, Group> Groups;
 
-
+    
     typedef std::vector<std::string> GroupNames;
 
     struct CommandLineDesc {
-
+        
         std::string argv0;
-
+        
         Args args;
-
+        
         Groups groups;
-
+        
         GroupNames group_names;
     };
 
-
+    
     const unsigned int feature_max_length = 12;
 
-
+    
     CommandLineDesc* desc_ = nullptr;
 
     bool arg_matches(
@@ -3203,25 +3186,25 @@ namespace {
     using namespace GEO;
     using namespace CmdLine;
 
-
+    
     bool ui_separator_opened = false;
 
-
+    
     index_t ui_term_width = 79;
 
-
+    
     index_t ui_left_margin = 0;
 
-
+    
     index_t ui_right_margin = 0;
 
-
+    
     const char working[] = {'|', '/', '-', '\\'};
 
-
+    
     index_t working_index = 0;
 
-
+    
     const char waves[] = {',', '.', 'o', 'O', '\'', 'O', 'o', '.', ','};
 
     inline std::ostream& ui_out() {
@@ -3755,6 +3738,11 @@ namespace {
             "algo:nn_search", "BNN",
             "Nearest neighbors search (BNN, ...)"
         );
+	declare_arg(
+	    "algo:random_seed", -1,
+	    "seed for random number generator"
+	    " (-1: use default, -2: non-deterministic)"
+	);
         declare_arg(
             "algo:delaunay", "NN",
             "Delaunay algorithm"
@@ -4241,6 +4229,10 @@ namespace {
 	    "gfx:hidden", false,
 	    "if set, window is hidden (useful for offscreen rendering)"
 	);
+	declare_arg(
+	    "gfx:monitor", -1,
+	    "monitor where to open window, or -1 for default"
+	);
     }
 
     void import_arg_group_biblio() {
@@ -4269,7 +4261,7 @@ namespace {
 #endif
     }
 
-
+    
 
     void set_profile_cad() {
         set_arg("pre:repair", true);
@@ -4587,7 +4579,7 @@ namespace {
 
 namespace GEO {
 
-
+    
 
     int LoggerStreamBuf::sync() {
         std::string str(this->str());
@@ -4596,7 +4588,7 @@ namespace GEO {
         return 0;
     }
 
-
+    
 
     LoggerStream::LoggerStream(Logger* logger) :
         std::ostream(new LoggerStreamBuf(this)),
@@ -4612,12 +4604,12 @@ namespace GEO {
         logger_->notify(this, str);
     }
 
-
+    
 
     LoggerClient::~LoggerClient() {
     }
 
-
+    
 
     ConsoleLogger::ConsoleLogger() {
     }
@@ -4645,7 +4637,7 @@ namespace GEO {
         geo_argused(str);
     }
 
-
+    
 
     FileLogger::FileLogger() :
         log_file_(nullptr) {
@@ -4703,7 +4695,7 @@ namespace GEO {
         geo_argused(str);
     }
 
-
+    
 
     SmartPointer<Logger> Logger::instance_;
 
@@ -4917,7 +4909,8 @@ namespace GEO {
         std::ostream& result =
             (is_initialized() && !Process::is_running_threads()) ?
             instance()->out_stream(feature) :
-            (instance()->err_console() << "    [" << feature << "] ");
+            (instance()->err_console() << "    >>"
+	                               << CmdLine::ui_feature(feature));
 	for(index_t i=0; i<instance_->indent_; ++i) {
 	    result << "| ";
 	}
@@ -5004,7 +4997,11 @@ namespace GEO {
                 it->out(feat_msg);
             }
 
-            current_feature_changed_ = false;
+	    // There is a mechanism for not repeating feature when it is
+	    // the same as in previous message, but finally I systematically
+	    // display feature (else the log is not super easy to read,
+	    // especially when there are nested Stopwatches).
+            current_feature_changed_ = true;
         }
     }
 
@@ -5073,7 +5070,7 @@ namespace GEO {
         }
     }
 
-
+    
 
 }
 
@@ -5720,7 +5717,7 @@ namespace GEO {
         Node::~Node() {
         }
 
-
+        
 
         std::string Node::extension(const std::string& path) {
             size_t len = path.length();
@@ -5852,7 +5849,7 @@ namespace GEO {
             return result;
         }
 
-
+        
 
         bool Node::is_file(const std::string& path) {
             geo_argused(path);
@@ -5973,7 +5970,7 @@ namespace GEO {
             return result;
         }
 
-
+        
 
         bool MemoryNode::copy_file(
             const std::string& from, const std::string& to
@@ -6203,7 +6200,7 @@ namespace GEO {
             }
         }
 
-
+        
 
         void initialize() {
             root_ = new FileSystemRootNode;
@@ -6535,10 +6532,10 @@ namespace GEO {
     }
 
     void PackedArrays::get_array(
-        index_t array_index, index_t* array, bool do_lock
+        index_t array_index, index_t* array, bool lock
     ) const {
         geo_debug_assert(array_index < nb_arrays_);
-        if(do_lock) {
+        if(lock) {
             lock_array(array_index);
         }
         const index_t* array_base = Z1_ + array_index * Z1_stride_;
@@ -6553,7 +6550,7 @@ namespace GEO {
             array_base = ZV_[array_index];
             Memory::copy(array, array_base, sizeof(index_t) * nb);
         }
-        if(do_lock) {
+        if(lock) {
             unlock_array(array_index);
         }
     }
@@ -6561,10 +6558,10 @@ namespace GEO {
     void PackedArrays::set_array(
         index_t array_index,
         index_t array_size, const index_t* array,
-        bool do_lock
+        bool lock
     ) {
         geo_debug_assert(array_index < nb_arrays_);
-        if(do_lock) {
+        if(lock) {
             lock_array(array_index);
         }
         index_t* array_base = Z1_ + array_index * Z1_stride_;
@@ -6582,16 +6579,16 @@ namespace GEO {
             array_base = ZV_[array_index];
             Memory::copy(array_base, array, sizeof(index_t) * nb);
         }
-        if(do_lock) {
+        if(lock) {
             unlock_array(array_index);
         }
     }
 
     void PackedArrays::resize_array(
-        index_t array_index, index_t array_size, bool do_lock
+        index_t array_index, index_t array_size, bool lock
     ) {
         geo_debug_assert(array_index < nb_arrays_);
-        if(do_lock) {
+        if(lock) {
             lock_array(array_index);
         }
         index_t* array_base = Z1_ + array_index * Z1_stride_;
@@ -6609,7 +6606,7 @@ namespace GEO {
                 );
             }
         }
-        if(do_lock) {
+        if(lock) {
             unlock_array(array_index);
         }
     }
@@ -6667,19 +6664,19 @@ namespace {
 
     class TerminalProgressClient : public ProgressClient {
     public:
-
+        
         void begin() override {
             const ProgressTask* task = Progress::current_progress_task();
             CmdLine::ui_progress(task->task_name(), 0, 0);
         }
 
-
+        
         void progress(index_t step, index_t percent) override {
             const ProgressTask* task = Progress::current_progress_task();
             CmdLine::ui_progress(task->task_name(), step, percent);
         }
 
-
+        
         void end(bool canceled) override {
             const ProgressTask* task = Progress::current_progress_task();
             double elapsed = Stopwatch::now() - task->start_time();
@@ -6693,7 +6690,7 @@ namespace {
         }
 
     protected:
-
+        
         ~TerminalProgressClient() override {
         }
     };
@@ -6707,7 +6704,7 @@ namespace GEO {
         return "Task canceled";
     }
 
-
+    
 
     namespace Progress {
 
@@ -6742,12 +6739,12 @@ namespace GEO {
         }
     }
 
-
+    
 
     ProgressClient::~ProgressClient() {
     }
 
-
+    
 
     ProgressTask::ProgressTask(
         const std::string& task_name, index_t max_steps, bool quiet
@@ -6896,7 +6893,7 @@ namespace {
 
     double start_time_ = 0.0;
 
-
+    
 
     class ProcessEnvironment : public Environment {
     protected:
@@ -6929,6 +6926,10 @@ namespace {
                 value = assert_mode() == ASSERT_THROW ? "throw" : "abort";
                 return true;
             }
+	    if(name == "algo:random_seed") {
+		value = String::to_string(random_seed_);
+		return true;
+	    }
             return false;
         }
 
@@ -6970,15 +6971,22 @@ namespace {
                     << std::endl;
                 return false;
             }
+	    if(name == "algo:random_seed") {
+		random_seed_ = String::to_int(value);
+		Numeric::random_reset(random_seed_);
+		return true;
+	    }
             return false;
         }
 
-
+        
         ~ProcessEnvironment() override {
         }
+    private:
+	int random_seed_ = -1;
     };
 
-
+    
 
 #ifdef GEO_OPENMP
 
@@ -6987,17 +6995,17 @@ namespace {
         OMPThreadManager() {
         }
 
-
+        
         virtual index_t maximum_concurrent_threads() {
             return Process::number_of_cores();
         }
 
     protected:
-
+        
         virtual ~OMPThreadManager() {
         }
 
-
+        
         virtual void run_concurrent_threads(
             ThreadGroup& threads, index_t max_threads
         ) {
@@ -7023,17 +7031,17 @@ namespace {
         TBBThreadManager() {
         }
 
-
+        
         virtual index_t maximum_concurrent_threads() {
             return tbb::this_task_arena::max_concurrency();
         }
 
     protected:
-
+        
         virtual ~TBBThreadManager() {
         }
 
-
+        
         virtual void run_concurrent_threads(
             ThreadGroup& threads, index_t max_threads
         ) {
@@ -7076,7 +7084,7 @@ namespace GEO {
     Thread::~Thread() {
     }
 
-
+    
 
     ThreadManager::~ThreadManager() {
     }
@@ -7092,7 +7100,7 @@ namespace GEO {
         }
     }
 
-
+    
 
     MonoThreadingThreadManager::~MonoThreadingThreadManager() {
     }
@@ -7109,7 +7117,7 @@ namespace GEO {
         return 1;
     }
 
-
+    
 
     namespace Process {
 
@@ -7725,14 +7733,14 @@ namespace {
             pthread_attr_setdetachstate(&attr_, PTHREAD_CREATE_JOINABLE);
         }
 
-
+        
         index_t maximum_concurrent_threads() override {
             return Process::number_of_cores();
         }
 
 
     protected:
-
+        
         ~PThreadManager() override {
             pthread_attr_destroy(&attr_);
         }
@@ -7746,7 +7754,7 @@ namespace {
             return nullptr;
         }
 
-
+        
         void run_concurrent_threads (
             ThreadGroup& threads, index_t max_threads
         ) override {
@@ -8116,7 +8124,7 @@ namespace {
         WindowsThreadManager() {
         }
 
-
+        
         index_t maximum_concurrent_threads() override {
             SYSTEM_INFO sysinfo;
             GetSystemInfo(&sysinfo);
@@ -8124,11 +8132,11 @@ namespace {
         }
 
     protected:
-
+        
         ~WindowsThreadManager() override {
         }
 
-
+        
         void run_concurrent_threads(
             ThreadGroup& threads, index_t max_threads
         ) override {
@@ -8183,7 +8191,7 @@ namespace {
         }
 
     protected:
-
+        
         ~WindowsThreadPoolManager() override {
 // It makes it crash on exit when calling these functions
 // with dynamic libs, I do not know why...
@@ -8194,7 +8202,7 @@ namespace {
 #endif
         }
 
-
+        
         void run_concurrent_threads(
             ThreadGroup& threads, index_t max_threads
         ) override {
@@ -8692,6 +8700,7 @@ namespace GEO {
 #include <stdlib.h>
 #include <sstream>
 #include <stdexcept>
+#include <iostream>
 
 #ifdef GEO_OS_WINDOWS
 #include <intrin.h> // For __debugbreak()
@@ -8723,6 +8732,10 @@ namespace GEO {
     }
 
     void geo_abort() {
+#ifdef GEO_OS_WINDOWS
+	std::cerr << "Aborting, press any key to continue" << std::endl;
+	std::getchar();
+#endif
         // Avoid assert in assert !!
         if(aborting) {
             Process::brute_force_kill();
@@ -8838,7 +8851,9 @@ namespace GEO {
     {
 	if(verbose_) {
 	    Logger::out(task_name_) << "Start..." << std::endl;
-	    Logger::instance()->indent();
+	    if(task_name_ != "Total time") {
+		Logger::instance()->indent();
+	    }
 	}
     }
 
@@ -8869,7 +8884,9 @@ namespace GEO {
 
     Stopwatch::~Stopwatch() {
         if(verbose_) {
-	    Logger::instance()->unindent();
+	    if(task_name_ != "Total time") {
+		Logger::instance()->unindent();
+	    }
 	    print_elapsed_time();
 	}
     }
@@ -8915,8 +8932,19 @@ namespace GEO {
         }
 
         void random_reset() {
-            random_engine = std::mt19937_64();
+	    random_reset(CmdLine::get_arg_int("algo:random_seed"));
         }
+
+        void random_reset(int random_seed) {
+	    if(random_seed == -1) {
+		random_engine = std::mt19937_64();
+	    } else if(random_seed == -2) {
+		std::random_device rnd;
+		random_engine = std::mt19937_64(rnd());
+	    } else {
+		random_engine = std::mt19937_64(Numeric::uint64(random_seed));
+	    }
+	}
 
         int32 random_int32() {
             return std::uniform_int_distribution<int32>(
@@ -9094,7 +9122,8 @@ namespace GEO {
     };
 
     void GEOGRAM_API mesh_reorder(
-        Mesh& M, MeshOrder order = MESH_ORDER_HILBERT
+        Mesh& M, MeshOrder order = MESH_ORDER_HILBERT,
+	MeshElementsFlags elements = MESH_ALL_ELEMENTS
     );
 
     void GEOGRAM_API compute_mesh_elements_spatial_order(
@@ -9174,7 +9203,7 @@ namespace {
         return middle;
     }
 
-
+    
 
     class VertexArray {
     public:
@@ -9210,7 +9239,7 @@ namespace {
         VertexArray vertices;
     };
 
-
+    
 
     template <int COORD, bool UP, class MESH>
     struct Hilbert_vcmp {
@@ -9248,7 +9277,7 @@ namespace {
         const MESH& mesh_;
     };
 
-
+    
 
     template <int COORD, bool UP, class MESH>
     struct Morton_vcmp {
@@ -9266,7 +9295,7 @@ namespace {
         const MESH& mesh_;
     };
 
-
+    
 
 #ifndef GEOGRAM_PSM
 
@@ -9332,7 +9361,7 @@ namespace {
         }
     };
 
-
+    
 
     template <int COORD, class MESH>
     class Base_tcmp {
@@ -9395,7 +9424,7 @@ namespace {
         }
     };
 
-
+    
 
     template <int COORD, class MESH>
     class Base_ccmp {
@@ -9460,7 +9489,7 @@ namespace {
 
 #endif
 
-
+    
 
     template <template <int COORD, bool UP, class MESH> class CMP, class MESH>
     struct HilbertSort3d {
@@ -9576,7 +9605,7 @@ namespace {
         m0_, m1_, m2_, m3_, m4_, m5_, m6_, m7_, m8_;
     };
 
-
+    
 
     template <template <int COORD, bool UP, class MESH> class CMP, class MESH>
     struct HilbertSort2d {
@@ -9627,7 +9656,7 @@ namespace {
         const MESH& M_;
     };
 
-
+    
 
 #ifndef GEOGRAM_PSM
 
@@ -9768,12 +9797,12 @@ namespace GEO {
 
 #ifndef GEOGRAM_PSM
 
-    void mesh_reorder(Mesh& M, MeshOrder order) {
+    void mesh_reorder(Mesh& M, MeshOrder order, MeshElementsFlags elements) {
 
         geo_assert(M.vertices.dimension() >= 3);
 
         // Step 1: reorder vertices
-        {
+        if((elements & MESH_VERTICES) != 0) {
             vector<index_t> sorted_indices;
             switch(order) {
             case MESH_ORDER_HILBERT:
@@ -9787,7 +9816,7 @@ namespace GEO {
         }
 
         // Step 2: reorder facets
-        if(M.facets.nb() != 0) {
+        if(((elements & MESH_FACETS) != 0) && (M.facets.nb() != 0)) {
             vector<index_t> sorted_indices;
             switch(order) {
             case MESH_ORDER_HILBERT:
@@ -9801,7 +9830,7 @@ namespace GEO {
         }
 
         // Step 3: reorder cells
-        if(M.cells.nb() != 0) {
+        if(((elements & MESH_CELLS) != 0) && (M.cells.nb() != 0)) {
             vector<index_t> sorted_indices;
             switch(order) {
             case MESH_ORDER_HILBERT:
@@ -10070,16 +10099,14 @@ namespace GEO {
 // This makes sure the compiler will not optimize y = a*x+b
 // with fused multiply-add, this would break the exact
 // predicates.
-#ifdef GEO_COMPILER_MSVC
-#pragma fp_contract(off)
-#endif
+GEO_FP_CONTRACT_OFF
 
 
 namespace {
 
     using namespace GEO;
 
-
+    
 
     inline void two_one_sum(
         double a1, double a0, double b, double& x2, double& x1, double& x0
@@ -10862,7 +10889,7 @@ namespace GEO {
         return *this;
     }
 
-
+    
 
     bool expansion::is_same_as(const expansion& rhs) const {
         if(length() != rhs.length()) {
@@ -10946,18 +10973,13 @@ namespace GEO {
 
     void expansion::show_all_stats() {
 #ifdef PCK_STATS
-        Logger::out("expansion") << "Stats" << std::endl;
-        for(index_t i = 0; i < expansion_length_histo_.size(); ++i) {
-            if(expansion_length_histo_[i] != 0) {
-                Logger::out("expansion")
-                    << "len " << i
-                    << " : " << expansion_length_histo_[i] << std::endl;
-            }
-        }
+	// Place holder: if we compute statistics for expansions,
+	// the code here will be called if sys:stats is specified
+	// on command line.
 #endif
     }
 
-
+    
 
     Sign sign_of_expansion_determinant(
         const expansion& a00,const expansion& a01,
@@ -11049,13 +11071,13 @@ namespace GEO {
         return result.sign();
     }
 
-
+    
 
     void expansion::optimize() {
         compress_expansion(*this);
     }
 
-
+    
 
 }
 
@@ -19479,9 +19501,7 @@ namespace GEO {
 // This makes sure the compiler will not optimize y = a*x+b
 // with fused multiply-add, this would break the exact
 // predicates.
-#ifdef GEO_COMPILER_MSVC
-#pragma fp_contract(off)
-#endif
+GEO_FP_CONTRACT_OFF
 
 #include <algorithm>
 
@@ -19549,6 +19569,7 @@ namespace {
             }
         }
     }
+
 
     inline double max4(double x1, double x2, double x3, double x4) {
 #ifdef __SSE2__
@@ -19788,14 +19809,8 @@ namespace {
         // Simulation of Simplicity (symbolic perturbation)
         if(r_sign == ZERO) {
             stats_side2.log_SOS();
-
-            const double* p_sort[3];
-            p_sort[0] = p0;
-            p_sort[1] = p1;
-            p_sort[2] = p2;
-
+            const double* p_sort[3] = {p0, p1, p2};
             SOS_sort(p_sort, p_sort + 3, dim);
-
             for(index_t i = 0; i < 3; ++i) {
                 if(p_sort[i] == p0) {
                     const expansion& z1 = expansion_diff(Delta, a21);
@@ -19949,12 +19964,7 @@ namespace {
         // Simulation of Simplicity (symbolic perturbation)
         if(r_sign == ZERO) {
             stats_side3.log_SOS();
-
-            const double* p_sort[4];
-            p_sort[0] = p0;
-            p_sort[1] = p1;
-            p_sort[2] = p2;
-            p_sort[3] = p3;
+            const double* p_sort[4] = {p0, p1, p2, p3};
             SOS_sort(p_sort, p_sort + 4, dim);
             for(index_t i = 0; i < 4; ++i) {
                 if(p_sort[i] == p0) {
@@ -20067,13 +20077,7 @@ namespace {
         // Simulation of Simplicity (symbolic perturbation)
         if(r_sign == ZERO) {
             stats_side3h.log_SOS();
-
-            const double* p_sort[4];
-            p_sort[0] = p0;
-            p_sort[1] = p1;
-            p_sort[2] = p2;
-            p_sort[3] = p3;
-
+            const double* p_sort[4] = {p0, p1, p2, p3};
             SOS_sort(p_sort, p_sort + 4, 3);
             for(index_t i = 0; i < 4; ++i) {
                 if(p_sort[i] == p0) {
@@ -20269,13 +20273,7 @@ namespace {
         // Simulation of Simplicity (symbolic perturbation)
         if(sos && r_sign == ZERO) {
             stats_side4.log_SOS();
-
-            const double* p_sort[5];
-            p_sort[0] = p0;
-            p_sort[1] = p1;
-            p_sort[2] = p2;
-            p_sort[3] = p3;
-            p_sort[4] = p4;
+            const double* p_sort[5] = {p0, p1, p2, p3, p4};
             SOS_sort(p_sort, p_sort + 5, 3);
             for(index_t i = 0; i < 5; ++i) {
                 if(p_sort[i] == p0) {
@@ -20419,13 +20417,7 @@ namespace {
         // Simulation of Simplicity (symbolic perturbation)
         if(r_sign == ZERO) {
             stats_side4.log_SOS();
-
-            const double* p_sort[5];
-            p_sort[0] = p0;
-            p_sort[1] = p1;
-            p_sort[2] = p2;
-            p_sort[3] = p3;
-            p_sort[4] = p4;
+            const double* p_sort[5] = {p0, p1, p2, p3, p4};
             SOS_sort(p_sort, p_sort + 5, dim);
             for(index_t i = 0; i < 5; ++i) {
                 if(p_sort[i] == p0) {
@@ -20530,32 +20522,22 @@ namespace {
         return result;
     }
 
-    // ============ orient2d ==============================================
+    // ============ orient2d ====================================================
 
-    Sign orient_2d_exact(
-        const double* p0, const double* p1, const double* p2
-    ) {
+    Sign orient_2d_exact(const double* p0, const double* p1, const double* p2) {
         stats_orient2d.log_exact();
-
         const expansion& a11 = expansion_diff(p1[0], p0[0]);
         const expansion& a12 = expansion_diff(p1[1], p0[1]);
-
         const expansion& a21 = expansion_diff(p2[0], p0[0]);
         const expansion& a22 = expansion_diff(p2[1], p0[1]);
-
-        const expansion& Delta = expansion_det2x2(
-            a11, a12, a21, a22
-        );
-
+        const expansion& Delta = expansion_det2x2(a11, a12, a21, a22);
         return Delta.sign();
     }
 
-
-    // ============ orient3d ==============================================
+    // ============ orient3d ===================================================
 
     Sign orient_3d_exact(
-        const double* p0, const double* p1,
-        const double* p2, const double* p3
+        const double* p0, const double* p1, const double* p2, const double* p3
     ) {
 	stats_orient3d.log_exact();
 
@@ -20644,13 +20626,7 @@ namespace {
         // Simulation of Simplicity (symbolic perturbation)
         if(sos && r_sign == ZERO) {
             stats_orient3dh.log_SOS();
-            const double* p_sort[5];
-            p_sort[0] = p0;
-            p_sort[1] = p1;
-            p_sort[2] = p2;
-            p_sort[3] = p3;
-            p_sort[4] = p4;
-
+            const double* p_sort[5] = {p0, p1, p2, p3, p4};
             SOS_sort(p_sort, p_sort + 5, 3);
             for(index_t i = 0; i < 5; ++i) {
                 if(p_sort[i] == p0) {
@@ -20729,11 +20705,7 @@ namespace {
 
         // Simulation of Simplicity (symbolic perturbation)
         if(sos && r_sign == ZERO) {
-            const double* p_sort[4];
-            p_sort[0] = p0;
-            p_sort[1] = p1;
-            p_sort[2] = p2;
-            p_sort[3] = p3;
+            const double* p_sort[4] = {p0, p1, p2, p3};
             SOS_sort(p_sort, p_sort + 4, 2);
             for(index_t i = 0; i < 4; ++i) {
                 if(p_sort[i] == p0) {
@@ -21135,7 +21107,6 @@ namespace GEO {
             return result;
         }
 
-
         Sign orient_3d(
             const double* p0, const double* p1,
             const double* p2, const double* p3
@@ -21148,6 +21119,42 @@ namespace GEO {
             return result;
         }
 
+        Sign orient_3d_SOS(
+            const double* p0, const double* p1,
+	    const double* p2, const double* p3
+        ) {
+	    struct SOS {
+		SOS(
+		    const double* p0, const double* p1,
+		    const double* p2, const double* p3
+		) : p_orig{p0,p1,p2,p3}, p_sort{p0, p1, p2, p3} {
+		    SOS_sort(p_sort, p_sort+4, 3);
+		    parity = Permutation::permutation_is_odd(p_orig, p_sort, 4)
+			? NEGATIVE : POSITIVE;
+		}
+		Sign orient_1d(index_t i, index_t j, index_t ax) const {
+		    return Sign(parity * geo_cmp(p_sort[i][ax], p_sort[j][ax]));
+		}
+		Sign orient_2d(
+		    index_t i, index_t j, index_t k, index_t ax1, index_t ax2
+		) const {
+		    double x0 = p_sort[i][ax1]; double y0 = p_sort[i][ax2];
+		    double x1 = p_sort[j][ax1]; double y1 = p_sort[j][ax2];
+		    double x2 = p_sort[k][ax1]; double y2 = p_sort[k][ax2];
+		    const expansion& a11 = expansion_diff(x1, x0);
+		    const expansion& a12 = expansion_diff(y1, y0);
+		    const expansion& a21 = expansion_diff(x2, x0);
+		    const expansion& a22 = expansion_diff(y2, y0);
+		    const expansion& D = expansion_det2x2(a11, a12, a21, a22);
+		    return Sign(parity * D.sign());
+		}
+		const double* p_orig[4];
+		const double* p_sort[4];
+		Sign parity;
+	    };
+
+	    return orient_3d_SOS_impl<const double*, SOS>(p0,p1,p2,p3);
+        }
 
         Sign orient_3dlifted(
             const double* p0, const double* p1,
@@ -21451,7 +21458,7 @@ namespace GEO {
         return *this;
     }
 
-
+    
 
     expansion_nt expansion_nt::operator+ (const expansion_nt& rhs) const {
         expansion* e = expansion::new_expansion_on_heap(
@@ -21501,7 +21508,7 @@ namespace GEO {
         return expansion_nt(e);
     }
 
-
+    
 
     expansion_nt expansion_nt::operator- () const {
         expansion_nt result(*this);
@@ -21509,7 +21516,7 @@ namespace GEO {
         return result;
     }
 
-
+    
 
     expansion_nt expansion_nt_determinant(
         const expansion_nt& a00,const expansion_nt& a01,
@@ -21603,7 +21610,7 @@ namespace GEO {
         return expansion_nt(expansion_nt::DIFF,z1,z2);
     }
 
-
+    
 
     namespace Numeric {
 
@@ -22221,7 +22228,7 @@ namespace GEO {
         return expansion_nt(expansion_nt::SUM,m1,m2,m3);
     }
 
-
+    
 
     template<> vec3Hg<expansion_nt> mix(
         const rationalg<expansion_nt>& t, const vec3& p1, const vec3& p2
@@ -22264,7 +22271,7 @@ namespace GEO {
         );
     }
 
-
+    
 
     template <> vec3E triangle_normal<vec3E>(
         const vec3& p1, const vec3& p2, const vec3& p3
@@ -22289,10 +22296,76 @@ namespace GEO {
         Nz->assign_det2x2(Ux,Uy,Vx,Vy);
         return vec3E(expansion_nt(Nx), expansion_nt(Ny), expansion_nt(Nz));
     }
-
 #endif
-
 }
+
+
+
+#ifndef GEOGRAM_PSM
+namespace GEO {
+    namespace PCK {
+        Sign orient_3d_SOS(
+            const exact::vec3h& p0, const exact::vec3h& p1,
+            const exact::vec3h& p2, const exact::vec3h& p3
+        ) {
+
+	    struct SOS {
+		enum {W=3};
+
+		SOS(
+		    const exact::vec3h& p0, const exact::vec3h& p1,
+		    const exact::vec3h& p2, const exact::vec3h& p3
+		) : p_orig{&p0, &p1, &p2, &p3}, p_sort{&p0, &p1, &p2, &p3} {
+		    std::sort(
+			p_sort, p_sort+4,
+			[](
+			    const exact::vec3h* pp1, const exact::vec3h* pp2
+			)->bool {
+			    vec3HgLexicoCompare<exact::scalar> cmp;
+			    return cmp(*pp1,*pp2);
+			}
+		    );
+		    parity = Permutation::permutation_is_odd(p_orig, p_sort, 4)
+			? NEGATIVE : POSITIVE;
+		}
+
+		Sign orient_1d(index_t i, index_t j, index_t axis) const {
+		    coord_index_t ax = coord_index_t(axis);
+		    Sign s = geo_cmp(
+			exact::rational((*p_sort[i])[ax], (*p_sort[i])[W]),
+			exact::rational((*p_sort[j])[ax], (*p_sort[j])[W])
+		    );
+		    return Sign(s*parity);
+		}
+
+		Sign orient_2d(
+		    index_t i, index_t j, index_t k, index_t axis1, index_t axis2
+		) const {
+		    coord_index_t ax1 = coord_index_t(axis1);
+		    coord_index_t ax2 = coord_index_t(axis2);
+		    exact::vec2h pi{
+			(*p_sort[i])[ax1], (*p_sort[i])[ax2], (*p_sort[i])[W]
+		    };
+		    exact::vec2h pj{
+			(*p_sort[j])[ax1], (*p_sort[j])[ax2], (*p_sort[j])[W]
+		    };
+		    exact::vec2h pk{
+			(*p_sort[k])[ax1], (*p_sort[k])[ax2], (*p_sort[k])[W]
+		    };
+		    Sign s = PCK::orient_2d(pi,pj,pk);
+		    return Sign(s*parity);
+		}
+
+		const exact::vec3h* p_orig[4];
+		const exact::vec3h* p_sort[4];
+		Sign parity;
+	    };
+
+	    return orient_3d_SOS_impl<exact::vec3h, SOS>(p0,p1,p2,p3);
+	}
+    }
+}
+#endif
 
 /******* extracted from cavity.h *******/
 
@@ -22482,26 +22555,26 @@ namespace GEO {
                 geo_assert_not_reached;
             }
 
-
+            
             local_index_t  h2t_[MAX_H];
 
-
+            
 #ifdef GARGANTUA
             index_t h2v_[MAX_H][2];
 #else
             Numeric::uint64 h2v_[MAX_H];
 #endif
 
-
+            
             index_t nb_f_;
 
-
+            
             index_t tglobal_[MAX_F];
 
-
+            
             index_t boundary_f_[MAX_F];
 
-
+            
             index_t f2v_[MAX_F][3];
 
 
@@ -22631,7 +22704,7 @@ namespace GEO {
             return(t2 != cur_t);
         }
 
-
+        
 
         index_t max_t() const {
             return cell_to_v_store_.size() / 4;
@@ -22754,7 +22827,7 @@ namespace GEO {
             cell_next_[t] = cur_stamp_;
         }
 
-
+        
 
         static index_t tet_facet_vertex(index_t f, index_t v) {
             geo_debug_assert(f < 4);
@@ -22835,7 +22908,7 @@ namespace GEO {
             cell_to_cell_store_[4 * t + 3] = a3;
         }
 
-
+        
 
         index_t get_facet_by_halfedge(index_t t, index_t v1, index_t v2) const {
             geo_debug_assert(t < max_t());
@@ -22884,7 +22957,7 @@ namespace GEO {
             );
         }
 
-
+        
 
         bool tet_is_conflict(index_t t, const double* p) const {
 
@@ -23092,7 +23165,7 @@ namespace GEO {
         Cavity cavity_;
     };
 
-
+    
 
     class GEOGRAM_API RegularWeightedDelaunay3d : public Delaunay3d {
     public:
@@ -23218,16 +23291,12 @@ namespace GEO {
                     cell_status_t val = (i < size_) ?
                         old_cell_status[i].load(std::memory_order_relaxed) :
                         FREE_CELL;
-                    std::atomic_init(&cell_status_[i],val);
+                    cell_status_[i].store(val, std::memory_order_relaxed);
                 }
                 delete[] old_cell_status;
             }
             size_ = size_in;
-#ifdef __cpp_lib_atomic_is_always_lock_free
             static_assert(std::atomic<cell_status_t>::is_always_lock_free);
-#else
-            geo_debug_assert(size_ == 0 || cell_status_[0].is_lock_free());
-#endif
         }
 
         void resize(index_t size_in) {
@@ -23391,7 +23460,7 @@ namespace GEO {
         return std::logic_error::what();
     }
 
-
+    
 
     void Delaunay::initialize() {
 
@@ -24592,7 +24661,7 @@ namespace GEO {
         return true;
     }
 
-
+    
 
     void Delaunay2d::show_triangle(index_t t) const {
         std::cerr << "tri"
@@ -24751,7 +24820,7 @@ namespace GEO {
         std::cerr << std::endl << "Delaunay Geo OK" << std::endl;
     }
 
-
+    
 
     RegularWeightedDelaunay2d::RegularWeightedDelaunay2d(
         coord_index_t dimension
@@ -25749,7 +25818,7 @@ namespace GEO {
         return true;
     }
 
-
+    
 
     void Delaunay3d::show_tet(index_t t) const {
         std::cerr << "tet"
@@ -25912,7 +25981,7 @@ namespace GEO {
         std::cerr << std::endl << "Delaunay Geo OK" << std::endl;
     }
 
-
+    
 
     RegularWeightedDelaunay3d::RegularWeightedDelaunay3d(
         coord_index_t dimension
@@ -26970,7 +27039,12 @@ namespace GEO {
         index_t locate_inexact(
             const double* p, index_t hint, index_t max_iter
         ) const {
-            // If no hint specified, find a tetrahedron randomly
+            //   If no hint was specified, or the specified hint refers to a
+            // tetrahedron that another thread freed/recycled in the meanwhile,
+            // find a tetrahedron randomly.
+            if(hint != NO_TETRAHEDRON && tet_is_free(hint)) {
+                hint = NO_TETRAHEDRON;
+            }
             while(hint == NO_TETRAHEDRON) {
                 hint = thread_safe_random(max_used_t_);
                 if(tet_is_free(hint) || tet_thread(hint) != NO_THREAD) {
@@ -27008,11 +27082,13 @@ namespace GEO {
                 for(index_t lv=0; lv<4; ++lv) {
                     index_t iv = tet_vertex(t,lv);
 
-                    // Since we did not acquire any lock,
+
+		    // Since we did not acquire any lock,
                     // it is possible that another threads made
-                    // this tetrahedron virtual (in this case
-                    // we exit immediately).
-                    if(iv == NO_INDEX) {
+                    // this tetrahedron virtual (iv == NO_INDEX) or
+		    // deleted this tetrahedron (iv == VERTEX_OF_DELETED_TET)
+		    // (in both cases we exit immediately).
+                    if(iv == NO_INDEX || iv == VERTEX_OF_DELETED_TET) {
                         return NO_TETRAHEDRON;
                     }
                     pv[lv] = vertex_ptr(iv);
@@ -27340,7 +27416,7 @@ namespace GEO {
             }
         }
 
-
+        
 
         class StellateConflictStack {
         public:
@@ -27575,7 +27651,7 @@ namespace GEO {
 
         StellateConflictStack S2_;
 
-
+        
 
         void show_tet_adjacent(index_t t, index_t lf) const {
             index_t adj = tet_adjacent(t, lf);
@@ -27812,7 +27888,7 @@ namespace GEO {
     };
 
 
-
+    
 
     ParallelDelaunay3d::ParallelDelaunay3d(
         coord_index_t dimension
@@ -28335,7 +28411,7 @@ namespace VBW {
         v2e_.assign(max_v_,uchar(-1));
     }
 
-
+    
 
     void ConvexCell::clear() {
         nb_t_ = 0;
@@ -28352,7 +28428,7 @@ namespace VBW {
 #endif
     }
 
-
+    
 
     void ConvexCell::init_with_box(
         double xmin, double ymin, double zmin,
@@ -28453,7 +28529,7 @@ namespace VBW {
     }
 
 
-
+    
 
     void ConvexCell::save(const std::string& filename, double shrink) const {
         std::ofstream out(filename.c_str());
@@ -28627,7 +28703,7 @@ namespace VBW {
 
 #endif
 
-
+    
 
     bool ConvexCell::has_v_global_index(global_index_t v) const {
         vbw_assert(has_vglobal_);
@@ -28938,7 +29014,7 @@ namespace VBW {
         triangulate_conflict_zone(lv, conflict_head, conflict_tail);
     }
 
-
+    
 
     void ConvexCell::triangulate_conflict_zone(
         index_t lv, index_t conflict_head, index_t conflict_tail
@@ -29047,7 +29123,7 @@ namespace VBW {
     }
 
 
-
+    
 
     bool ConvexCell::triangle_is_in_conflict(
         TriangleWithFlags T, const vec4& eqn
@@ -29263,7 +29339,7 @@ namespace VBW {
         return result;
     }
 
-
+    
 
     void ConvexCell::grow_v() {
         max_v_ *= 2;
@@ -29282,7 +29358,7 @@ namespace VBW {
         }
     }
 
-
+    
 
     void ConvexCell::kill_vertex(index_t v) {
         for(index_t t=0; t<nb_t(); ++t) {
@@ -29302,7 +29378,7 @@ namespace VBW {
         }
     }
 
-
+    
 
     void ConvexCell::compute_geometry() {
         if(!geometry_dirty_) {
@@ -29488,7 +29564,7 @@ namespace VBW {
         }
     }
 
-
+    
 
 
     double ConvexCell::squared_radius(vec3 center) const {
@@ -29592,7 +29668,7 @@ namespace VBW {
         }
     }
 
-
+    
 
 
 }
@@ -29719,7 +29795,7 @@ namespace {
 #endif
     }
 
-
+    
 
     // TODO: move these two functions to mesh_reorder.h
 
@@ -29793,7 +29869,7 @@ namespace {
         );
     }
 
-
+    
 
     void delaunay_citations() {
         geo_cite_with_info(
@@ -31161,10 +31237,8 @@ namespace GEO {
             // Thank to Laurent Alonso for this idea.
             const index_t* T = &(cell_to_v_store_[4 * t]);
 
-            index_t lv1,lv2;
-
-            lv1 = (T[1] == v1) | ((T[2] == v1) * 2) | ((T[3] == v1) * 3);
-            lv2 = (T[1] == v2) | ((T[2] == v2) * 2) | ((T[3] == v2) * 3);
+            index_t lv1 = index_t((T[1] == v1) | ((T[2] == v1) * 2) | ((T[3] == v1) * 3));
+            index_t lv2 = index_t((T[1] == v2) | ((T[2] == v2) * 2) | ((T[3] == v2) * 3));
             geo_debug_assert(lv1 != 0 || T[0] == v1);
             geo_debug_assert(lv2 != 0 || T[0] == v2);
             geo_debug_assert(lv1 != lv2);
@@ -31346,7 +31420,7 @@ namespace GEO {
             }
         }
 
-
+        
 
         class StellateConflictStack {
         public:
@@ -31588,7 +31662,7 @@ namespace GEO {
 
         StellateConflictStack S2_;
 
-
+        
 
         void show_tet_adjacent(index_t t, index_t lf) const {
             index_t adj = tet_adjacent(t, lf);
@@ -31766,7 +31840,7 @@ namespace GEO {
         index_t nb_free_;
         bool memory_overflow_;
 
-
+	
         struct SFrame {
 
             SFrame() {
@@ -31868,7 +31942,7 @@ namespace GEO {
     };
 
 
-
+    
 
     PeriodicDelaunay3d::PeriodicDelaunay3d(
         bool periodic, double period
@@ -32597,7 +32671,7 @@ namespace GEO {
         return f;
     }
 
-
+    
 
     void PeriodicDelaunay3d::insert_vertices(
 	const char* phase, index_t b, index_t e
@@ -33681,7 +33755,7 @@ namespace GEO {
         return W.v;
     }
 
-    // The two functions below are more complicated than I wished, but is
+    // The two functions below are more complicated than I wished, but are
     // simpler than it looks like. There are two main different cases:
     //
     // - walk_constraint_v(): we are on a vertex.
@@ -34233,7 +34307,7 @@ namespace GEO {
     }
 
 
-
+    
 
     void CDTBase2d::insert_vertex_in_edge(
         index_t v, index_t t, index_t le1, DList& S
@@ -34360,7 +34434,7 @@ namespace GEO {
         debug_Tcheck(t2);
     }
 
-
+    
 
     bool CDTBase2d::is_convex_quad(index_t t) const {
         index_t v1 = Tv(t,0);
@@ -34378,7 +34452,7 @@ namespace GEO {
             orient2d(v4,v1,v2) == orient_012_ ;
     }
 
-
+    
 
     void CDTBase2d::check_geometry() const {
         if(delaunay_ && exact_incircle_) {
@@ -34440,7 +34514,7 @@ namespace GEO {
         }
     }
 
-
+    
 
     index_t CDTBase2d::locate_naive(index_t v, index_t hint, Sign* o) const {
         geo_argused(hint);
@@ -34561,7 +34635,7 @@ namespace GEO {
         }
     }
 
-
+    
 
     CDT2d::CDT2d() {
         exact_intersections_ = false;
@@ -34794,7 +34868,7 @@ namespace GEO {
 #endif
     }
 
-
+    
 
     ExactCDT2d::ExactCDT2d():
         use_pred_cache_insert_buffer_(false) {
@@ -35254,7 +35328,7 @@ namespace GEO {
 #endif
     }
 
-
+    
 }
 
 /******* extracted from ../points/nn_search.cpp *******/
@@ -35858,7 +35932,7 @@ namespace GEO {
         splitting_val = splitting_val_[n];
     }
 
-
+    
 
     AdaptiveKdTree::AdaptiveKdTree(coord_index_t dim) : KdTree(dim) {
     }
@@ -36066,7 +36140,7 @@ namespace GEO {
         splitting_val = splitting_val_[n];
     }
 
-
+    
 
 }
 
@@ -36139,7 +36213,7 @@ namespace GEO {
 
 #ifndef GEOGRAM_PSM
                 // Register attribute types that can be saved into files.
-                geo_register_attribute_type<Numeric::uint8>("bool");
+		geo_register_attribute_type<bool,Numeric::uint8>("bool");
                 geo_register_attribute_type<char>("char");
 		geo_register_attribute_type<unsigned char>("unsigned char");
                 geo_register_attribute_type<int>("int");
@@ -36159,9 +36233,19 @@ namespace GEO {
                 // program runs in node.js.
                 // Current working directory is mounted in /working,
                 // and root directory is mounted in /root
+                //
+                // Skip this when NODERAWFS is enabled: the real
+                // filesystem is already mounted at '/', so
+                // FS.mkdir('/working') would try to create a
+                // directory at the real root and fail with EROFS
+                // (crashing worker pthreads).
 
                 EM_ASM(
-                    if(typeof module !== 'undefined' && this.module !== module) {
+                    if(
+			typeof NODERAWFS === 'undefined' &&
+			typeof module !== 'undefined' &&
+			this.module !== module
+		    ) {
                         FS.mkdir('/working');
                         FS.mkdir('/root');
                         FS.mount(NODEFS, { root: '.' }, '/working');
