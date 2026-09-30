@@ -5785,6 +5785,20 @@ namespace GEO {
 	    xyz_max[2] += d;
 	}
 
+	void clear() {
+	    for(index_t c=0; c<3; ++c) {
+		xyz_min[c] =  Numeric::max_float64();
+		xyz_max[c] = -Numeric::max_float64();
+	    }
+	}
+
+	void add(const vec3& p) {
+	    for(index_t c=0; c<3; ++c) {
+		xyz_min[c] = std::min(xyz_min[c], p[c]);
+		xyz_max[c] = std::max(xyz_max[c], p[c]);
+	    }
+	}
+
     };
 
     typedef Box Box3d;
@@ -5857,6 +5871,20 @@ namespace GEO {
 	    xy_min[1] -= d;
 	    xy_max[0] += d;
 	    xy_max[1] += d;
+	}
+
+	void clear() {
+	    for(index_t c=0; c<2; ++c) {
+		xy_min[c] =  Numeric::max_float64();
+		xy_max[c] = -Numeric::max_float64();
+	    }
+	}
+
+	void add(const vec2& p) {
+	    for(index_t c=0; c<2; ++c) {
+		xy_min[c] = std::min(xy_min[c], p[c]);
+		xy_max[c] = std::max(xy_max[c], p[c]);
+	    }
 	}
     };
 
@@ -6461,6 +6489,7 @@ namespace GEO {
 
 namespace GEO {
 
+    extern bool expansion_initialized_;
     extern double expansion_splitter_;
     extern double expansion_epsilon_;
 
@@ -6495,6 +6524,7 @@ namespace GEO {
     }
 
     inline void split(double a, double& ahi, double& alo) {
+	geo_debug_assert(expansion_initialized_);
         double c = expansion_splitter_ * a;
         double abig = c - a;
         ahi = c - abig;
@@ -8414,8 +8444,18 @@ namespace GEO {
 #ifdef GEO_NO_INTERVALS
     typedef intervalDummy interval_nt;
 #else
-    typedef intervalRN interval_nt; // Seems that valgrind does not support RU
-    //typedef intervalRU interval_nt;
+    // interval_nt uses round to nearet (RN)
+    typedef intervalRN interval_nt;
+
+    // one could use round to upper (RU) instead, supposed to be slightly faster
+    // but we chose not to use it because:
+    //  - does not seem to be significantly faster
+    //  - makes the code more complicated, needs to change rounding mode)
+    //    (but it is handled properly with the Rounding class provided that
+    //     client code does not forget to declare one)
+    //  - needs the compilation flag -frounding-math (disable compiler
+    //    optimizations that suppose "round to nearest" mode)
+    // typedef intervalRU interval_nt;
 #endif
 
 
@@ -11681,6 +11721,10 @@ namespace GEO {
 
         void compute();
 
+	bool periodic() const {
+	    return periodic_;
+	}
+
         void use_exact_predicates_for_convex_cell(bool x) {
             convex_cell_exact_predicates_ = x;
         }
@@ -11725,6 +11769,10 @@ namespace GEO {
             IncidentTetrahedra W;
             copy_Laguerre_cell_from_Delaunay(i,C,W);
         }
+
+	void abort_if_empty_cell(bool x) {
+	    abort_on_empty_cell_ = x;
+	}
 
         bool has_empty_cells() const {
             return has_empty_cells_;
@@ -11811,6 +11859,8 @@ namespace GEO {
         bool update_periodic_v_to_cell_;
         vector<index_t> periodic_v_to_cell_rowptr_;
         vector<index_t> periodic_v_to_cell_data_;
+
+	bool abort_on_empty_cell_;
 
         bool has_empty_cells_;
 
@@ -12721,6 +12771,10 @@ namespace GEO {
         );
 
         void save(const std::string& filename) const override;
+
+	static double squared_length(
+	    const expansion_nt& x, const expansion_nt& y, const expansion_nt& w
+	);
 
     protected:
 

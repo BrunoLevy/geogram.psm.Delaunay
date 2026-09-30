@@ -8977,20 +8977,36 @@ namespace GEO {
 
     BooleanExpression(const std::string& expr);
 
-    bool operator()(index_t x);
+    bool operator()(index_t x) const;
 
     protected:
-    bool parse_or();
-    bool parse_and();
-    bool parse_factor();
-    bool parse_variable();
-    char cur_char() const;
-    void next_char();
+
+    struct Context {
+	Context(
+	    const std::string& E, index_t x
+	) : ptr_(E.begin()), end_(E.end()), x_(x) {
+	}
+	char cur_char() const {
+	    return (ptr_ == end_) ? '\0' : *ptr_;
+	}
+	void next_char() {
+	    if(ptr_ == end_) {
+		throw std::logic_error("Unexpected end of string");
+	    }
+	    ptr_++;
+	}
+	std::string::const_iterator ptr_;
+	std::string::const_iterator end_;
+	index_t x_;
+    };
+
+    bool parse_or(Context& C) const;
+    bool parse_and(Context& C) const;
+    bool parse_factor(Context& C) const;
+    bool parse_variable(Context& C) const;
 
     private:
     std::string expr_;
-    std::string::iterator ptr_;
-    index_t x_;
     };
 
 
@@ -9008,96 +9024,84 @@ namespace GEO {
     ) : expr_(expr) {
     }
 
-    bool BooleanExpression::operator()(index_t x) {
-        x_   = x;
-        ptr_ = expr_.begin();
-        return parse_or();
+    bool BooleanExpression::operator()(index_t x) const {
+	Context C(expr_, x);
+	return parse_or(C);
     }
 
-    bool BooleanExpression::parse_or() {
-        bool left = parse_and();
+    bool BooleanExpression::parse_or(Context& C) const {
+        bool left = parse_and(C);
         while(
-            cur_char() == '|' ||
-            cur_char() == '^' ||
-            cur_char() == '+' ||
-            cur_char() == '-'
+            C.cur_char() == '|' ||
+            C.cur_char() == '^' ||
+            C.cur_char() == '+' ||
+            C.cur_char() == '-'
         ) {
-            char op = cur_char();
-            next_char();
-            bool right = parse_and();
+            char op = C.cur_char();
+            C.next_char();
+            bool right = parse_and(C);
             left = (op == '-') ? (left && !right) :
                 (op == '^') ? (left ^   right) :
-                (left ||  right) ;
+                (left || right) ;
         }
         return left;
     }
 
-    bool BooleanExpression::parse_and() {
-        bool left = parse_factor();
-        while(cur_char() == '&' || cur_char() == '*') {
-            next_char();
-            bool right = parse_factor();
+    bool BooleanExpression::parse_and(Context& C) const {
+        bool left = parse_factor(C);
+        while(C.cur_char() == '&' || C.cur_char() == '*') {
+            C.next_char();
+            bool right = parse_factor(C);
             left = left && right;
         }
         return left;
     }
 
-    bool BooleanExpression::parse_factor() {
-        if(cur_char() == '!' || cur_char() == '~' || cur_char() == '-') {
-            next_char();
-            return !parse_factor();
+    bool BooleanExpression::parse_factor(Context& C) const {
+        if(C.cur_char() == '!' || C.cur_char() == '~' || C.cur_char() == '-') {
+            C.next_char();
+            return !parse_factor(C);
         }
-        if(cur_char() == '(') {
-            next_char();
-            bool result = parse_or();
-            if(cur_char() != ')') {
+        if(C.cur_char() == '(') {
+            C.next_char();
+            bool result = parse_or(C);
+            if(C.cur_char() != ')') {
                 throw std::logic_error(
-                    std::string("Unmatched parenthesis: ")+cur_char()
+                    std::string("Unmatched parenthesis: ")+C.cur_char()
                 );
             }
-            next_char();
+            C.next_char();
             return result;
         }
-        if((cur_char() == '*')) {
-            next_char();
-            return (x_ != 0);
+        if((C.cur_char() == '*')) {
+            C.next_char();
+            return (C.x_ != 0);
         }
-        if((cur_char() >= 'A' && cur_char() <= 'Z') || cur_char() == 'x') {
-            return parse_variable();
+        if((C.cur_char() >= 'A' && C.cur_char() <= 'Z') || C.cur_char() == 'x') {
+            return parse_variable(C);
         }
         throw std::logic_error("Syntax error");
     }
 
-    bool BooleanExpression::parse_variable() {
+    bool BooleanExpression::parse_variable(Context& C) const {
         int bit = 0;
-        if(cur_char() >= 'A' && cur_char() <= 'Z') {
-            bit = int(cur_char()) - int('A');
-            next_char();
+        if(C.cur_char() >= 'A' && C.cur_char() <= 'Z') {
+            bit = int(C.cur_char()) - int('A');
+            C.next_char();
         } else {
-            if(cur_char() != 'x') {
+            if(C.cur_char() != 'x') {
                 throw std::logic_error("Syntax error in variable");
             }
-            next_char();
-            while(cur_char() >= '0' && cur_char() <= '9') {
-                bit = bit * 10 + (int(cur_char()) - '0');
-                next_char();
+            C.next_char();
+            while(C.cur_char() >= '0' && C.cur_char() <= '9') {
+                bit = bit * 10 + (int(C.cur_char()) - '0');
+                C.next_char();
             }
         }
         if(bit > 31) {
             throw std::logic_error("Bit larger than 31");
         }
-        return ((x_ & (index_t(1u) << bit)) != 0);
-    }
-
-    char BooleanExpression::cur_char() const {
-        return (ptr_ == expr_.end()) ? '\0' : *ptr_;
-    }
-
-    void BooleanExpression::next_char() {
-        if(ptr_ == expr_.end()) {
-            throw std::logic_error("Unexpected end of string");
-        }
-        ptr_++;
+        return ((C.x_ & (index_t(1u) << bit)) != 0);
     }
 }
 
@@ -10526,6 +10530,7 @@ namespace GEO {
 
     double expansion_splitter_;
     double expansion_epsilon_;
+    bool expansion_initialized_ = false;
 
     void expansion::initialize() {
         // Taken from Jonathan Shewchuk's exactinit.
@@ -10552,6 +10557,7 @@ namespace GEO {
             check = 1.0 + expansion_epsilon_;
         } while((check != 1.0) && (check != lastcheck));
         expansion_splitter_ += 1.0;
+	expansion_initialized_ = true;
     }
 
     // ====== Initialization from expansion and double ===============
@@ -21628,22 +21634,41 @@ namespace GEO {
             if(s1 != s2) {
                 return (int(s1) > int(s2) ? POSITIVE : NEGATIVE);
             }
+
             if(a_denom == b_denom) {
-                const expansion& diff_num = expansion_diff(
-                    a_num.rep(), b_num.rep()
-                );
-                return Sign(diff_num.sign() * a_denom.sign());
+		if(std::max(a_num.length(),b_num.length()) < 16) {
+		    const expansion& diff_num = expansion_diff(
+			a_num.rep(), b_num.rep()
+		    );
+		    return Sign(diff_num.sign() * a_denom.sign());
+		} else {
+		    expansion_nt diff_num = a_num - b_num;
+		    return Sign(diff_num.sign() * a_denom.sign());
+		}
             }
-            const expansion& num_a = expansion_product(
-                a_num.rep(), b_denom.rep()
-            );
-            const expansion& num_b = expansion_product(
-                b_num.rep(), a_denom.rep()
-            );
-            const expansion& diff_num = expansion_diff(num_a, num_b);
-            return Sign(
-                diff_num.sign() * a_denom.sign() * b_denom.sign()
-            );
+
+	    if(
+		std::max(a_num.length(),b_num.length()) < 4 &&
+		std::max(a_denom.length(),b_denom.length()) < 4
+	    ) {
+		const expansion& num_a = expansion_product(
+		    a_num.rep(), b_denom.rep()
+		);
+		const expansion& num_b = expansion_product(
+		    b_num.rep(), a_denom.rep()
+		);
+		const expansion& diff_num = expansion_diff(num_a, num_b);
+		return Sign(
+		    diff_num.sign() * a_denom.sign() * b_denom.sign()
+		);
+	    } else {
+		expansion_nt num_a = a_num * b_denom;
+		expansion_nt num_b = b_num * a_denom;
+		expansion_nt diff_num = num_a - num_b;
+		return Sign(
+		    diff_num.sign() * a_denom.sign() * b_denom.sign()
+		);
+	    }
         }
 
     }
@@ -29950,6 +29975,7 @@ namespace GEO {
             cell_to_cell_store_(master_->cell_to_cell_store_),
             cell_next_(master_->cell_next_),
             cell_status_(master_->cell_status_),
+	    abort_on_empty_cell_(master->abort_on_empty_cell_),
             has_empty_cells_(false) {
 
 	    max_t_ = master_->cell_next_.size();
@@ -30080,9 +30106,12 @@ namespace GEO {
 
             while(
                 work_rbegin_ >= work_begin_ &&
-                !memory_overflow_ &&
-                !has_empty_cells_ &&
-                !master_->has_empty_cells_
+                !memory_overflow_ && (
+		    !abort_on_empty_cell_ || (
+			!has_empty_cells_ &&
+			!master_->has_empty_cells_
+		    )
+		)
             ) {
                 index_t v = direction_ ? work_begin_ : work_rbegin_ ;
                 index_t& hint = direction_ ? b_hint_ : e_hint_ ;
@@ -31906,6 +31935,7 @@ namespace GEO {
         std::condition_variable cond_;
         std::mutex mutex_;
 
+	bool abort_on_empty_cell_;
         bool has_empty_cells_;
 
         static char tet_facet_vertex_[4][3];
@@ -31952,6 +31982,7 @@ namespace GEO {
         period_(period,period,period),
         weights_(nullptr),
         update_periodic_v_to_cell_(false),
+	abort_on_empty_cell_(false),
         has_empty_cells_(false),
         nb_reallocations_(0),
         convex_cell_exact_predicates_(true)
@@ -32111,7 +32142,7 @@ namespace GEO {
 		stats_.phase_0_t_ = Wmain.elapsed_time();
 	    }
 
-	    if(has_empty_cells_) {
+	    if(abort_on_empty_cell_ && has_empty_cells_) {
 		return;
 	    }
 
@@ -32120,7 +32151,7 @@ namespace GEO {
 		handle_periodic_boundaries();
 	    }
 
-	    if(has_empty_cells_) {
+	    if(abort_on_empty_cell_ && has_empty_cells_) {
 		return;
 	    }
 	}
@@ -32710,7 +32741,7 @@ namespace GEO {
 #endif
 
 	insert_vertices_with_BRIO(phase, levels);
-        if(has_empty_cells_) {
+        if(abort_on_empty_cell_ && has_empty_cells_) {
             return;
         }
         PeriodicDelaunay3dThread* thread0 = thread(0);
@@ -32759,7 +32790,9 @@ namespace GEO {
 
         if(thread0->has_empty_cells()) {
             has_empty_cells_ = true;
-            return;
+	    if(abort_on_empty_cell_) {
+		return;
+	    }
         }
 
         index_t nb_sequential_points = 0;
@@ -32801,7 +32834,9 @@ namespace GEO {
             for(index_t t=0; t<this->nb_threads(); ++t) {
                 if(thread(t)->has_empty_cells()) {
                     has_empty_cells_ = true;
-                    return;
+		    if(abort_on_empty_cell_) {
+			return;
+		    }
                 }
             }
 
@@ -32823,7 +32858,9 @@ namespace GEO {
 		t1->run();
 		if(t1->has_empty_cells()) {
 		    has_empty_cells_ = true;
-		    return;
+		    if(abort_on_empty_cell_) {
+			return;
+		    }
 		}
 	    }
 
@@ -32841,7 +32878,7 @@ namespace GEO {
 		t0->set_max_t(tn->max_t());
 	    }
 
-	    if(has_empty_cells_) {
+	    if(abort_on_empty_cell_ && has_empty_cells_) {
 		return;
 	    }
 
@@ -33232,7 +33269,9 @@ namespace GEO {
         for(index_t v=0; v<nb_vertices_non_periodic_; ++v) {
             if(v_to_cell_[v] == NO_INDEX) {
                 has_empty_cells_ = true;
-                return;
+		if(abort_on_empty_cell_) {
+		    return;
+		}
             }
         }
 
@@ -34956,10 +34995,7 @@ namespace GEO {
         point_.push_back(p);
         id_.push_back(id);
 #ifndef GEOGRAM_USE_EXACT_NT
-        length_.push_back(
-            (geo_sqr(p.x) + geo_sqr(p.y)).estimate() /
-            geo_sqr(p.w).estimate()
-        );
+        length_.push_back(squared_length(p.x, p.y, p.w));
 #endif
     }
 
@@ -35326,6 +35362,31 @@ namespace GEO {
             }
         }
 #endif
+    }
+
+    double ExactCDT2d::squared_length(
+	const expansion_nt& x, const expansion_nt& y, const expansion_nt& w
+    ) {
+	double result = 0.0;
+#if defined(__SIZEOF_FLOAT128__) || defined(__FLOAT128__)
+	{
+	    expansion_nt Num = geo_sqr(x) + geo_sqr(y);
+	    expansion_nt Denom = geo_sqr(w);
+
+	    __float128 num = 0.0;
+	    for(index_t i=0; i<Num.rep().length(); ++i) {
+		num += Num.rep()[i];
+	    }
+	    __float128 denom = 0.0;
+	    for(index_t i=0; i<Denom.rep().length(); ++i) {
+		denom += Denom.rep()[i];
+	    }
+	    result = double(num/denom);
+	}
+#else
+        result = (geo_sqr(x) + geo_sqr(y)).estimate() / geo_sqr(w).estimate() ;
+#endif
+        return result;
     }
 
     
