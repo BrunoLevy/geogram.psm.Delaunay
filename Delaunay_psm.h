@@ -434,40 +434,46 @@ namespace GEO {
 // use geo_debug_assert() and geo_debug_range_assert()   expensive asserts
 // use geo_parano_assert() and geo_parano_range_assert() very exensive asserts
 
-#define geo_assert(x) {                                         \
+
+// used to implement geo_xxx_assert() macros: puts argument in a block and
+// has a dummy while to avoid compiler warning about spurious semi-colon.
+#define GEO_ASSERTION(X)    do { X } while(false)
+#define GEO_NO_ASSERTION()  do {   } while(false)
+
+#define geo_assert(x) GEO_ASSERTION({			\
         if(!(x)) {                                              \
             GEO::geo_assertion_failed(#x, __FILE__, __LINE__);  \
         }                                                       \
-    }
+    })
 
-#define geo_range_assert(x, min_val, max_val) {                         \
+#define geo_range_assert(x, min_val, max_val) GEO_ASSERTION({		\
         if(((x) < (min_val)) || ((x) > (max_val))) {                    \
             GEO::geo_range_assertion_failed(x, min_val, max_val,        \
                                             __FILE__, __LINE__          \
                                            );                           \
         }                                                               \
-    }
+    })
 
-#define geo_assert_not_reached {                                \
+#define geo_assert_not_reached GEO_ASSERTION({			\
         GEO::geo_should_not_have_reached(__FILE__, __LINE__);   \
-    }
+    })
 
 #ifdef GEO_DEBUG
 #define geo_debug_assert(x) geo_assert(x)
 #define geo_debug_range_assert(x, min_val, max_val) geo_range_assert(x, min_val, max_val)
 #define geo_debug(x) x
 #else
-#define geo_debug_assert(x)
-#define geo_debug_range_assert(x, min_val, max_val)
-#define geo_debug(x)
+#define geo_debug_assert(x) GEO_NO_ASSERTION()
+#define geo_debug_range_assert(x, min_val, max_val) GEO_NO_ASSERTION()
+#define geo_debug(x) GEO_NO_ASSERTION()
 #endif
 
 #ifdef GEO_PARANOID
 #define geo_parano_assert(x) geo_assert(x)
 #define geo_parano_range_assert(x, min_val, max_val) geo_range_assert(x, min_val, max_val)
 #else
-#define geo_parano_assert(x)
-#define geo_parano_range_assert(x, min_val, max_val)
+#define geo_parano_assert(x) GEO_NO_ASSERTION()
+#define geo_parano_range_assert(x, min_val, max_val) GEO_NO_ASSERTION()
 #endif
 
 #endif
@@ -487,6 +493,8 @@ namespace GEO {
 }
 
 #endif
+
+/******* extracted from ../basic/i387.h *******/
 
 /******* extracted from ../basic/numeric.h *******/
 
@@ -701,15 +709,22 @@ namespace GEO {
 #  define GEO_FP_CONTRACT_OFF _Pragma("fp_contract(off)")
 #elif defined(__GNUC__)
 
+namespace {
+
 // GCC does not have any pragma to deactivate FMA generation,
 // so instead we check that they are deactivated (by the command-line
 // option -ffp-contract=off) and fire an assertion fail if it was not
-// the case.
-struct GeoAssertNoFpContract {
-    GeoAssertNoFpContract() {
+// the case. If targeting (very old) x87, deactivates the old extended
+// precision mode .
+  struct GeoAssertStrictIEEE754 {
+    GeoAssertStrictIEEE754() {
+#ifdef GEO_387 // disable (very old) 387 extended precision
+    geo_disable_387_extended_precision();
+#endif
 #ifdef GEOGRAM_PSM
 	if(fp_contraction_enabled()) {
-	    std::cerr << "Needs to be compiled with -ffp-contract-off"
+	    std::cerr << "Needs to be compiled with -ffp-contract-off "
+		      << "(or no x87 extended precision)"
 		      << std::endl;
 	    abort();
 	}
@@ -723,9 +738,11 @@ struct GeoAssertNoFpContract {
     __attribute__((noipa)) static double a2plusb(double a, double b) {
 	return a * a + b;
     }
-};
+  };
+}
+
 #  define GEO_FP_CONTRACT_OFF \
-    static GeoAssertNoFpContract CPP_CONCAT(assert_no_fp_contract_,__LINE__);
+    static GeoAssertStrictIEEE754 CPP_CONCAT(assert_strict_ieee_754_,__LINE__);
 #else
 #  define GEO_FP_CONTRACT_OFF _Pragma("STDC FP_CONTRACT OFF")
 #endif
@@ -3527,15 +3544,15 @@ namespace GEO {
         
         template <class T2>
         explicit vecng(const vecng<dim, T2>& v) :
-            x(v.x),
-            y(v.y) {
+            x(T(v.x)),
+            y(T(v.y)) {
         }
 
         
         template <class T2>
         explicit vecng(const T2* v) :
-            x(v[0]),
-            y(v[1]) {
+            x(T(v[0])),
+            y(T(v[1])) {
         }
 
         
@@ -3736,17 +3753,17 @@ namespace GEO {
         
         template <class T2>
         explicit vecng(const vecng<dim, T2>& v) :
-            x(v.x),
-            y(v.y),
-            z(v.z) {
+            x(T(v.x)),
+            y(T(v.y)),
+            z(T(v.z)) {
         }
 
         
         template <class T2>
         explicit vecng(const T2* v) :
-            x(v[0]),
-            y(v[1]),
-            z(v[2]) {
+            x(T(v[0])),
+            y(T(v[1])),
+            z(T(v[2])) {
         }
 
         
@@ -3975,19 +3992,19 @@ namespace GEO {
         
         template <class T2>
         explicit vecng(const vecng<dim, T2>& v) :
-            x(v.x),
-            y(v.y),
-            z(v.z),
-            w(v.w) {
+            x(T(v.x)),
+            y(T(v.y)),
+            z(T(v.z)),
+            w(T(v.w)) {
         }
 
         
         template <class T2>
         explicit vecng(const T2* v) :
-            x(v[0]),
-            y(v[1]),
-            z(v[2]),
-            w(v[3]) {
+            x(T(v[0])),
+            y(T(v[1])),
+            z(T(v[2])),
+            w(T(v[3])) {
         }
 
         
@@ -10382,8 +10399,7 @@ namespace GEO {
 
     template <typename ITERATOR>
     inline void random_shuffle(const ITERATOR& begin, const ITERATOR& end) {
-	Numeric::int32 seed = Numeric::random_int32();
-	std::mt19937 urng{Numeric::uint32(seed)};
+	std::mt19937 urng;
 	std::shuffle(begin, end, urng);
     }
 

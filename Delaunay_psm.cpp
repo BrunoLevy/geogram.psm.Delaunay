@@ -1822,8 +1822,7 @@ namespace GEO {
 
     template <typename ITERATOR>
     inline void random_shuffle(const ITERATOR& begin, const ITERATOR& end) {
-	Numeric::int32 seed = Numeric::random_int32();
-	std::mt19937 urng{Numeric::uint32(seed)};
+	std::mt19937 urng;
 	std::shuffle(begin, end, urng);
     }
 
@@ -4233,6 +4232,9 @@ namespace {
 	    "gfx:monitor", -1,
 	    "monitor where to open window, or -1 for default"
 	);
+	declare_arg(
+	    "gfx:buffers", "default", "one of default,TEXTURE_2D,TBO,SSBO"
+	);
     }
 
     void import_arg_group_biblio() {
@@ -4552,6 +4554,7 @@ namespace {
             std::ostream(new CERRStreamBuff(this)),lock_(GEOGRAM_SPINLOCK_INIT) {
         }
         ~CERRStream() override{
+            delete rdbuf();
         }
         void lock() {
             Process::acquire_spinlock(lock_);
@@ -7641,8 +7644,9 @@ namespace GEO {
 #include <new>
 
 // MUSL does not have execinfo (so we won't have backtrace with MUSL)
+// Android declares backtrace() only from API level 33.
 #if defined(__has_include)
-#if __has_include(<execinfo.h>)
+#if __has_include(<execinfo.h>) && (!defined(__ANDROID__) || __ANDROID_API__ >= 33)
 #include <execinfo.h>
 #define HAS_EXECINFO
 #endif
@@ -23565,6 +23569,11 @@ namespace GEO {
         keep_infinite_ = false;
         nb_finite_cells_ = 0;
         keep_regions_ = false;
+#ifdef GEO_DETERMINISTIC
+        // Reset the global RNG so the randomized spatial sort used when
+        // reordering vertices is reproducible across operations.
+        Numeric::random_reset();
+#endif
     }
 
     Delaunay::~Delaunay() {
@@ -26034,7 +26043,7 @@ namespace GEO {
 // no out-of-line virtual functions. It is not a
 // problem since they are only visible from this translation
 // unit, but clang will complain.
-#ifdef __clang__
+#ifdef GEO_COMPILER_CLANG
 #pragma GCC diagnostic ignored "-Wweak-vtables"
 #endif
 
@@ -26156,6 +26165,7 @@ namespace GEO {
         }
 
         void set_work(index_t b, index_t e) {
+            geo_debug_assert(work_size() == 0);
             work_begin_ = b;
             // e is one position past the last point index
             // to insert.
@@ -26178,6 +26188,7 @@ namespace GEO {
         Delaunay3dThread* thread(index_t t) {
             return static_cast<Delaunay3dThread*>(master_->threads_[t].get());
         }
+
 
         void run() override {
 
@@ -28080,6 +28091,7 @@ namespace GEO {
         thread0->run();
 
         index_t first_lvl = lvl;
+        index_t nb_sequential_points = 0;
 
         // Insert points in all BRIO levels
         for(; lvl<levels_.size()-1; ++lvl) {
@@ -28109,6 +28121,38 @@ namespace GEO {
                 b = e;
             }
             Process::run_threads(threads_);
+
+            // Drain overflowed work before the next level replaces its range.
+            // Outside Process::run_threads(), the memory pool can grow.
+            index_t nb_level_sequential_points = 0;
+            for(index_t t=0; t<threads_.size(); ++t) {
+                Delaunay3dThread* thread =
+                    static_cast<Delaunay3dThread*>(threads_[t].get());
+                index_t remaining = thread->work_size();
+                if(remaining == 0) {
+                    continue;
+                }
+                nb_level_sequential_points += remaining;
+                if(t != 0) {
+                    thread->initialize_from(thread0);
+                }
+                thread->run();
+                geo_debug_assert(thread->work_size() == 0);
+                if(t != 0) {
+                    thread0->initialize_from(thread);
+                }
+            }
+            nb_sequential_points += nb_level_sequential_points;
+
+            // All workers need the grown storage bound before parallel work
+            // resumes, including workers whose own ranges were completed.
+            if(nb_level_sequential_points != 0) {
+                for(index_t t=1; t<threads_.size(); ++t) {
+                    Delaunay3dThread* thread =
+                        static_cast<Delaunay3dThread*>(threads_[t].get());
+                    thread->initialize_from(thread0);
+                }
+            }
         }
 
 
@@ -28134,45 +28178,6 @@ namespace GEO {
                                 << tot_failed_locate << " restarted locate"
                                 << std::endl;
         }
-
-        // Run threads sequentialy, to insert missing points if
-        // memory overflow was encountered (in sequential mode,
-        // dynamic memory growing works)
-
-        index_t nb_sequential_points = 0;
-        for(index_t t=0; t<threads_.size(); ++t) {
-            Delaunay3dThread* t1 =
-                static_cast<Delaunay3dThread*>(threads_[t].get());
-
-            nb_sequential_points += t1->work_size();
-
-            if(t != 0) {
-                // We need to copy max_t_ from previous thread,
-                // since the memory pool may have grown.
-                Delaunay3dThread* t2 =
-                    static_cast<Delaunay3dThread*>(threads_[t-1].get());
-                t1->initialize_from(t2);
-            }
-            t1->run();
-        }
-
-        //  If some tetrahedra were created in sequential mode, then
-        // the maximum valid tetrahedron index was increased by all
-        // the threads in increasing number, so we copy it from the
-        // last thread into thread0 since we use thread0 afterwards
-        // to do the "compaction" afterwards.
-
-        if(nb_sequential_points != 0) {
-            Delaunay3dThread* t0 =
-                static_cast<Delaunay3dThread*>(threads_[0].get());
-            Delaunay3dThread* tn =
-                static_cast<Delaunay3dThread*>(
-                    threads_[threads_.size()-1].get()
-                );
-            t0->initialize_from(tn);
-        }
-
-
 
         if(benchmark_mode_) {
             if(nb_sequential_points != 0) {
@@ -35368,18 +35373,20 @@ namespace GEO {
 	const expansion_nt& x, const expansion_nt& y, const expansion_nt& w
     ) {
 	double result = 0.0;
-#if defined(__SIZEOF_FLOAT128__) || defined(__FLOAT128__)
+// Android's 32-bit x86 runtime has no quad-precision builtins for __float128.
+#if (defined(__SIZEOF_FLOAT128__) || defined(__FLOAT128__)) && \
+    !(defined(__ANDROID__) && defined(__i386__))
 	{
 	    expansion_nt Num = geo_sqr(x) + geo_sqr(y);
 	    expansion_nt Denom = geo_sqr(w);
 
-	    __float128 num = 0.0;
+	    __float128 num = __float128(0.0);
 	    for(index_t i=0; i<Num.rep().length(); ++i) {
-		num += Num.rep()[i];
+		num += __float128(Num.rep()[i]);
 	    }
-	    __float128 denom = 0.0;
+	    __float128 denom = __float128(0.0);
 	    for(index_t i=0; i<Denom.rep().length(); ++i) {
-		denom += Denom.rep()[i];
+		denom += __float128(Denom.rep()[i]);
 	    }
 	    result = double(num/denom);
 	}
@@ -36215,6 +36222,7 @@ namespace GEO {
 
 #ifdef GEO_OS_EMSCRIPTEN
 #include <emscripten.h>
+#pragma GCC diagnostic ignored "-Wc++20-extensions" // for EM_ASM()
 #endif
 
 namespace GEO {
